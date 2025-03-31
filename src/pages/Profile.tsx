@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { GolfBall, Settings, LogOut } from "lucide-react";
+import { Golf, Settings, LogOut } from "lucide-react";
 import Navbar from "../components/Navbar";
 import ProfileForm from "../components/ProfileForm";
 import { currentUserProfile } from "../data/mockGolfers";
@@ -43,7 +43,7 @@ const Profile = () => {
             <div>
               <h2 className="text-2xl font-bold">{profile.name}</h2>
               <div className="flex items-center mt-1 text-gray-600">
-                <GolfBall className="w-4 h-4 mr-1" />
+                <Golf className="w-4 h-4 mr-1" />
                 <span>Hcp {profile.handicap}</span>
               </div>
             </div>
