@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,16 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Golf-themed colors
+				golf: {
+					'green-light': '#8CC63F',
+					'green-dark': '#2E7D32',
+					'fairway': '#A5D6A7',
+					'sand': '#F5DEB3',
+					'sky': '#87CEEB',
+					'wood': '#8B4513',
+					'white': '#FFFFFF',
 				}
 			},
 			borderRadius: {
@@ -84,11 +95,18 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'swing': {
+					'0%': { transform: 'rotate(0deg)' },
+					'30%': { transform: 'rotate(-10deg)' },
+					'60%': { transform: 'rotate(5deg)' },
+					'100%': { transform: 'rotate(0deg)' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'swing': 'swing 2s ease-in-out'
 			}
 		}
 	},
