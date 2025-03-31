@@ -1,14 +1,14 @@
 
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Golf, Users } from "lucide-react";
+import { Flag, Users } from "lucide-react";
 
 const Index = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-green-50 to-white">
       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
         <div className="mb-8 text-golf-green-dark animate-swing">
-          <Golf size={64} />
+          <Flag size={64} />
         </div>
         
         <h1 className="text-4xl font-bold mb-4 text-golf-green-dark">Putt-Pals</h1>
