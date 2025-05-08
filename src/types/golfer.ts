@@ -13,6 +13,31 @@ export interface GolferProfile {
   profileImage: string;
   roundTypes: RoundType[];
   availability: string[];
+  // Add golf bag related fields
+  bag?: GolfBag;
+}
+
+export interface GolfClub {
+  id: string;
+  brand: string;
+  model: string;
+  type: ClubType;
+  loft?: number;
+  notes?: string;
+}
+
+export type ClubType = 
+  | 'Driver' 
+  | 'Wood'
+  | 'Hybrid'
+  | 'Iron'
+  | 'Wedge'
+  | 'Putter';
+
+export interface GolfBag {
+  id: string;
+  name: string;
+  clubs: GolfClub[];
 }
 
 export interface Match {

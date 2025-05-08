@@ -1,9 +1,12 @@
 
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Flag, Users } from "lucide-react";
+import { Flag, Users, LogIn, UserPlus } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const Index = () => {
+  const { user } = useAuth();
+  
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-green-50 to-white">
       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
@@ -17,25 +20,53 @@ const Index = () => {
         </p>
         
         <div className="grid gap-4 w-full max-w-xs">
-          <Link to="/browse">
-            <Button 
-              className="w-full bg-golf-green-dark hover:bg-golf-green-light text-white p-6"
-              size="lg"
-            >
-              <Users className="mr-2 h-5 w-5" />
-              Börja Matcha
-            </Button>
-          </Link>
-          
-          <Link to="/profile">
-            <Button 
-              variant="outline" 
-              className="w-full border-golf-green-dark text-golf-green-dark hover:bg-green-50 p-6"
-              size="lg"
-            >
-              Skapa Din Profil
-            </Button>
-          </Link>
+          {user ? (
+            <>
+              <Link to="/browse">
+                <Button 
+                  className="w-full bg-golf-green-dark hover:bg-golf-green-light text-white p-6"
+                  size="lg"
+                >
+                  <Users className="mr-2 h-5 w-5" />
+                  Börja Matcha
+                </Button>
+              </Link>
+              
+              <Link to="/golf-bag">
+                <Button 
+                  variant="outline" 
+                  className="w-full border-golf-green-dark text-golf-green-dark hover:bg-green-50 p-6"
+                  size="lg"
+                >
+                  <Flag className="mr-2 h-5 w-5" />
+                  Hantera Din Golfbag
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link to="/login">
+                <Button 
+                  className="w-full bg-golf-green-dark hover:bg-golf-green-light text-white p-6"
+                  size="lg"
+                >
+                  <LogIn className="mr-2 h-5 w-5" />
+                  Logga In
+                </Button>
+              </Link>
+              
+              <Link to="/signup">
+                <Button 
+                  variant="outline" 
+                  className="w-full border-golf-green-dark text-golf-green-dark hover:bg-green-50 p-6"
+                  size="lg"
+                >
+                  <UserPlus className="mr-2 h-5 w-5" />
+                  Skapa Konto
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
       

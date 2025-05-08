@@ -1,6 +1,6 @@
 
 import { Link, useLocation } from "react-router-dom";
-import { Search, User, MessageSquare, Home } from "lucide-react";
+import { Search, User, MessageSquare, Home, Flag } from "lucide-react";
 
 const Navbar = () => {
   const location = useLocation();
@@ -30,6 +30,14 @@ const Navbar = () => {
         >
           <MessageSquare className={`w-6 h-6 ${location.pathname === '/matches' ? 'text-golf-green-dark' : 'text-gray-500'}`} />
           <span>Matchningar</span>
+        </Link>
+
+        <Link 
+          to="/golf-bag" 
+          className={`nav-link ${location.pathname === '/golf-bag' ? 'active' : 'text-gray-500'}`}
+        >
+          <Flag className={`w-6 h-6 ${location.pathname === '/golf-bag' ? 'text-golf-green-dark' : 'text-gray-500'}`} />
+          <span>Golfbag</span>
         </Link>
         
         <Link 
