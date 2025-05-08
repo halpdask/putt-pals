@@ -4,8 +4,11 @@ import { GolferProfile, GolfBag, GolfClub, Match } from '../types/golfer';
 
 // Get the Supabase URL and public anon key from environment variables
 // These will be available after connecting to Supabase in Lovable
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = "https://fsazjbyvxrqpwjajfmkz.supabase.co";
+// import.meta.env.VITE_SUPABASE_URL;
+// import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzYXpqYnl2eHJxcHdqYWpmbWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY3MDE3NjIsImV4cCI6MjA2MjI3Nzc2Mn0.4TFjCzQSUDzclrP90z8B9x33jmrtkWsVdz2xCbBahvY";
+
 
 // Check if the required values are available
 if (!supabaseUrl || !supabaseAnonKey) {
