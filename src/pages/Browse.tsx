@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "../components/Navbar";
@@ -126,7 +125,8 @@ const Browse = () => {
         matchedWithId: id,
         timestamp: Date.now(),
         read: false,
-        status: 'confirmed' as const // Change from 'pending' to 'confirmed' to make matches appear immediately
+        status: 'confirmed' as const, // Change from 'pending' to 'confirmed' to make matches appear immediately
+        lastMessage: "Ny matchning!" // Add default last message
       };
       
       console.log("Creating match with data:", match);

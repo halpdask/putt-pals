@@ -631,7 +631,17 @@ export const createMatch = async (match: Omit<Match, 'id'>): Promise<Match | nul
     // If match already exists, return it instead of creating a new one
     if (existingMatches && existingMatches.length > 0) {
       console.log('Match already exists, returning existing match:', existingMatches[0]);
-      return existingMatches[0] as unknown as Match;
+      
+      // Map database fields to our Match type
+      return {
+        id: existingMatches[0].id,
+        golferId: existingMatches[0].golfer_id,
+        matchedWithId: existingMatches[0].matched_with_id,
+        timestamp: existingMatches[0].timestamp,
+        read: existingMatches[0].read,
+        status: existingMatches[0].status,
+        lastMessage: existingMatches[0].last_message
+      };
     }
     
     // Create new match with formatted data
@@ -640,7 +650,8 @@ export const createMatch = async (match: Omit<Match, 'id'>): Promise<Match | nul
       matched_with_id: match.matchedWithId,
       timestamp: match.timestamp,
       read: match.read,
-      status: match.status
+      status: match.status,
+      last_message: match.lastMessage || "Ny matchning!" // Add a default message
     };
     
     console.log('Sending match data to Supabase:', matchData);
