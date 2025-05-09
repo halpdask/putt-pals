@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Flag, Users, LogIn, UserPlus } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import PwaInstallButton from "../components/PwaInstallButton";
 
 const Index = () => {
   const { user } = useAuth();
@@ -73,6 +74,8 @@ const Index = () => {
       <div className="p-6 text-center text-gray-500">
         <p>Hitta någon att dela din nästa runda med</p>
       </div>
+      
+      <PwaInstallButton />
     </div>
   );
 };
