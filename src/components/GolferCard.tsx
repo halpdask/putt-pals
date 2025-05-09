@@ -9,9 +9,10 @@ interface GolferCardProps {
   golfer: GolferProfile;
   onLike: (id: string) => void;
   onDislike: (id: string) => void;
+  disabled?: boolean; // Added disabled prop as optional
 }
 
-const GolferCard = ({ golfer, onLike, onDislike }: GolferCardProps) => {
+const GolferCard = ({ golfer, onLike, onDislike, disabled = false }: GolferCardProps) => {
   const [showDetails, setShowDetails] = useState(false);
 
   return (
@@ -97,6 +98,7 @@ const GolferCard = ({ golfer, onLike, onDislike }: GolferCardProps) => {
           <button 
             className="swipe-button bg-red-50 text-red-500"
             onClick={() => onDislike(golfer.id)}
+            disabled={disabled}
           >
             <X size={28} />
           </button>
@@ -104,6 +106,7 @@ const GolferCard = ({ golfer, onLike, onDislike }: GolferCardProps) => {
           <button 
             className="swipe-button bg-green-50 text-golf-green-dark"
             onClick={() => onLike(golfer.id)}
+            disabled={disabled}
           >
             <Heart size={28} />
           </button>
