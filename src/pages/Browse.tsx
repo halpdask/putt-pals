@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "../components/Navbar";
@@ -20,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "../context/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAllProfiles, createMatch } from "../lib/supabase";
+import { Card } from "@/components/ui/card";
 import { mockGolfers } from "../data/mockGolfers"; // Keep as fallback
 
 interface FilterOptions {
@@ -41,6 +41,7 @@ const Browse = () => {
   const [isCreatingMatch, setIsCreatingMatch] = useState(false);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [loadingTime, setLoadingTime] = useState(0);
+  const [hasSwipedAll, setHasSwipedAll] = useState(false);
   const { toast } = useToast();
   const { user, profile, connectionOk, loading: authLoading } = useAuth();
   
@@ -213,8 +214,9 @@ const Browse = () => {
   const goToNextGolfer = () => {
     setCurrentIndex((prevIndex) => {
       if (prevIndex + 1 >= filteredGolfers.length) {
-        // Reset if we've gone through all golfers
-        return 0;
+        // No more golfers to show
+        setHasSwipedAll(true);
+        return prevIndex;
       }
       return prevIndex + 1;
     });
@@ -249,6 +251,19 @@ const Browse = () => {
     setLoadingError(null);
     setLoadingTime(0);
     refetch();
+  };
+
+  const handleRetryBrowse = () => {
+    // Shuffle profiles again and reset
+    if (fetchedProfiles && fetchedProfiles.length > 0) {
+      const shuffled = [...fetchedProfiles].sort(() => Math.random() - 0.5);
+      setFilteredGolfers(shuffled);
+      setCurrentIndex(0);
+      setHasSwipedAll(false);
+    } else {
+      // If no profiles, try to refetch
+      refetch();
+    }
   };
 
   // Show loading state while authentication is being initialized
@@ -320,7 +335,9 @@ const Browse = () => {
     );
   }
 
-  const currentGolfer = filteredGolfers.length > 0 ? filteredGolfers[currentIndex % filteredGolfers.length] : null;
+  const currentGolfer = !hasSwipedAll && filteredGolfers.length > 0 
+    ? filteredGolfers[currentIndex % filteredGolfers.length] 
+    : null;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
@@ -453,10 +470,34 @@ const Browse = () => {
             disabled={isCreatingMatch}
           />
         ) : (
-          <div className="golf-card h-[70vh] max-h-[600px] w-full max-w-md mx-auto bg-white flex items-center justify-center">
-            <p className="text-gray-500 text-center p-8">
-              Inga fler golfare att visa just nu. Kom tillbaka senare!
+          <Card className="golf-card h-[70vh] max-h-[600px] w-full max-w-md mx-auto bg-white flex flex-col items-center justify-center text-center p-8">
+            <img 
+              src="/placeholder.svg" 
+              alt="No golfers" 
+              className="w-40 h-40 mb-6 opacity-30"
+            />
+            <h3 className="text-2xl font-bold text-gray-700 mb-2">
+              Inga fler golfpartners
+            </h3>
+            <p className="text-gray-500 mb-8 max-w-xs">
+              {hasSwipedAll 
+                ? "Du har sett alla potentiella golfpartners som matchar dina filter." 
+                : "Det finns inga golfpartners som matchar dina valda filter."}
             </p>
+            <Button 
+              onClick={handleRetryBrowse}
+              className="bg-golf-green-dark hover:bg-golf-green-light flex items-center"
+            >
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              {hasSwipedAll ? "Se golfpartners igen" : "Ändra dina filter"}
+            </Button>
+          </Card>
+        )}
+        
+        {/* Optional swipe instructions for first-time users */}
+        {currentGolfer && (
+          <div className="text-center text-sm text-gray-500 mt-4">
+            <p>Svep åt höger för att gilla, åt vänster för att neka</p>
           </div>
         )}
       </div>
