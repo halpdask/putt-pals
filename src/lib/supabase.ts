@@ -3,8 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 import { GolferProfile, GolfBag, GolfClub, Match, ChatMessage } from '../types/golfer';
 
 // When using Lovable's Supabase integration, these variables are automatically injected
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = "https://fsazjbyvxrqpwjajfmkz.supabase.co";
+// import.meta.env.VITE_SUPABASE_URL;
+// import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzYXpqYnl2eHJxcHdqYWpmbWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY3MDE3NjIsImV4cCI6MjA2MjI3Nzc2Mn0.4TFjCzQSUDzclrP90z8B9x33jmrtkWsVdz2xCbBahvY";
 
 // Validate that we have the required configuration values
 if (!supabaseUrl || !supabaseAnonKey) {
