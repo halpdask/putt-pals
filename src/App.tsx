@@ -15,6 +15,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import GolfBag from "./pages/GolfBag";
 import CompleteProfile from "./pages/CompleteProfile";
+import PwaInstallPrompt from "./components/PwaInstallPrompt";
 
 // Configure the query client with retry logic
 const queryClient = new QueryClient({
@@ -179,6 +180,7 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <AppRoutes />
+            <PwaInstallPrompt />
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>
