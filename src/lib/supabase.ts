@@ -1,15 +1,15 @@
-import { createClient } from '@supabase/supabase-js';
-import { GolferProfile, GolfBag, GolfClub, Match } from '../types/golfer';
 
-// We need to ensure proper environment variables are available
+import { createClient } from '@supabase/supabase-js';
+import { GolferProfile, GolfBag, GolfClub, Match, ChatMessage } from '../types/golfer';
+
 // When using Lovable's Supabase integration, these variables are automatically injected
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Validate that we have the required configuration values
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Supabase URL or Anon Key is missing. Please check your Supabase integration in Lovable.');
-  throw new Error('Supabase configuration is missing. Please ensure the Lovable Supabase integration is properly configured.');
+  console.error('Supabase URL or Anon Key is missing. Please ensure your Supabase integration in Lovable is properly configured.');
+  throw new Error('Supabase configuration is missing');
 }
 
 // Create a single supabase client for interacting with your database
@@ -170,15 +170,6 @@ export const createMatch = async (match: Omit<Match, 'id'>): Promise<Match | nul
 };
 
 // Messages functionality
-export interface ChatMessage {
-  id: string;
-  match_id: string;
-  sender_id: string;
-  content: string;
-  timestamp: number;
-  read: boolean;
-}
-
 export const getChatMessages = async (matchId: string): Promise<ChatMessage[]> => {
   const { data, error } = await supabase
     .from('chat_messages')
