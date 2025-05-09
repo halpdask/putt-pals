@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "../components/Navbar";
 import GolferCard from "../components/GolferCard";
 import { Badge } from "@/components/ui/badge";
-import { Filter } from "lucide-react";
+import { Filter, RefreshCcw } from "lucide-react";
 import { 
   Sheet, 
   SheetContent, 
@@ -38,16 +39,40 @@ const Browse = () => {
   });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [isCreatingMatch, setIsCreatingMatch] = useState(false);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
+  const [loadingTime, setLoadingTime] = useState(0);
   const { toast } = useToast();
-  const { user, profile } = useAuth();
+  const { user, profile, connectionOk, loading: authLoading } = useAuth();
   
   const queryClient = useQueryClient();
   
-  // Fetch profiles from the database
-  const { data: fetchedProfiles, isLoading, isError } = useQuery({
+  // Fetch profiles from the database with improved error handling
+  const { 
+    data: fetchedProfiles, 
+    isLoading, 
+    isError, 
+    error, 
+    refetch 
+  } = useQuery({
     queryKey: ['profiles', user?.id],
-    queryFn: () => user?.id ? getAllProfiles(user.id) : Promise.resolve([]),
-    enabled: !!user?.id,
+    queryFn: async () => {
+      if (!user?.id) {
+        throw new Error("No user ID found");
+      }
+      
+      try {
+        const profiles = await getAllProfiles(user.id);
+        return profiles;
+      } catch (err) {
+        console.error("Error fetching profiles:", err);
+        setLoadingError("Failed to load golfer profiles");
+        throw err;
+      }
+    },
+    enabled: !!user?.id && connectionOk,
+    retry: 2,
+    retryDelay: attempt => Math.min(1000 * 2 ** attempt, 10000),
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
   
   const [filteredGolfers, setFilteredGolfers] = useState<GolferProfile[]>([]);
@@ -59,6 +84,30 @@ const Browse = () => {
     { value: "Foursome", label: "Foursome" },
     { value: "Scramble", label: "Scramble" },
   ];
+  
+  // Track loading time to detect potential infinite loading issues
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    
+    if (isLoading) {
+      timer = setInterval(() => {
+        setLoadingTime(prev => prev + 1);
+      }, 1000);
+    } else {
+      setLoadingTime(0);
+    }
+    
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isLoading]);
+  
+  // Show manual retry option if loading takes too long
+  useEffect(() => {
+    if (loadingTime > 10 && isLoading) {
+      setLoadingError("Loading is taking longer than expected");
+    }
+  }, [loadingTime, isLoading]);
 
   useEffect(() => {
     if (fetchedProfiles && fetchedProfiles.length > 0) {
@@ -195,13 +244,55 @@ const Browse = () => {
     }
     return `${value}`;
   };
+  
+  const handleRetry = () => {
+    setLoadingError(null);
+    setLoadingTime(0);
+    refetch();
+  };
 
-  // Show loading state while fetching profiles
-  if (isLoading) {
+  // Show loading state while authentication is being initialized
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 pb-16 flex items-center justify-center">
         <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-golf-green-dark mx-auto mb-4"></div>
+          <p className="text-golf-green-dark font-semibold">Kontrollerar inloggning...</p>
+        </div>
+        <Navbar />
+      </div>
+    );
+  }
+  
+  // Show login prompt if not logged in
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-16 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <h2 className="text-xl font-semibold mb-4">Logga in för att fortsätta</h2>
+          <p className="mb-6">Du måste vara inloggad för att se golfpartners.</p>
+          <Button 
+            onClick={() => window.location.href = "/login"}
+            className="bg-golf-green-dark hover:bg-golf-green-light"
+          >
+            Gå till inloggning
+          </Button>
+        </div>
+        <Navbar />
+      </div>
+    );
+  }
+
+  // Show loading state while fetching profiles
+  if (isLoading && !loadingError) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-16 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-golf-green-dark mx-auto mb-4"></div>
           <p className="text-golf-green-dark font-semibold">Laddar golfare...</p>
+          {loadingTime > 5 && (
+            <p className="text-sm text-gray-500 mt-2">Det tar lite tid...</p>
+          )}
         </div>
         <Navbar />
       </div>
@@ -209,15 +300,18 @@ const Browse = () => {
   }
 
   // Show error state if there was an issue fetching profiles
-  if (isError) {
+  if (isError || loadingError) {
     return (
       <div className="min-h-screen bg-gray-50 pb-16 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-500 font-semibold">Det gick inte att hämta golfprofilerna just nu.</p>
+          <p className="text-red-500 font-semibold mb-4">
+            {loadingError || "Det gick inte att hämta golfprofilerna just nu."}
+          </p>
           <Button 
-            onClick={() => window.location.reload()}
-            className="mt-4 bg-golf-green-dark hover:bg-golf-green-light"
+            onClick={handleRetry}
+            className="mt-4 bg-golf-green-dark hover:bg-golf-green-light flex items-center"
           >
+            <RefreshCcw className="mr-2 h-4 w-4" />
             Försök igen
           </Button>
         </div>

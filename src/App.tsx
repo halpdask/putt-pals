@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -31,6 +32,7 @@ const queryClient = new QueryClient({
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, connectionOk } = useAuth();
   const [isAuthCheck, setIsAuthCheck] = useState(true);
+  const [authCheckTimeout, setAuthCheckTimeout] = useState(false);
   
   useEffect(() => {
     // After initial load, set auth check to false
@@ -40,7 +42,37 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       }, 500);
       return () => clearTimeout(timer);
     }
+    
+    // Safety timeout to prevent infinite loading
+    const timeoutTimer = setTimeout(() => {
+      setAuthCheckTimeout(true);
+    }, 10000); // 10 seconds maximum wait
+    
+    return () => clearTimeout(timeoutTimer);
   }, [loading]);
+  
+  // If we hit the safety timeout and are still loading, show an error
+  if (authCheckTimeout && loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-red-50">
+        <div className="text-center max-w-md p-6 bg-white rounded-lg shadow-lg">
+          <h2 className="text-xl font-semibold text-red-600 mb-4">Inloggningsproblem</h2>
+          <p className="mb-4">Det tar onormalt lång tid att kontrollera din inloggning. Detta kan bero på:</p>
+          <ul className="list-disc text-left ml-6 mb-4">
+            <li>Tillfälligt serverfel</li>
+            <li>Problem med din internetanslutning</li>
+            <li>Din webbläsare kan vara för gammal</li>
+          </ul>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors"
+          >
+            Uppdatera sidan
+          </button>
+        </div>
+      </div>
+    );
+  }
   
   if (loading || isAuthCheck) {
     return (

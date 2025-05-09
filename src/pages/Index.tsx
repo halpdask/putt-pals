@@ -1,12 +1,31 @@
 
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Flag, Users, LogIn, UserPlus } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import PwaInstallButton from "../components/PwaInstallButton";
+import { useEffect, useState } from "react";
 
 const Index = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
+  
+  // Handle redirection for logged-in users after auth is confirmed
+  useEffect(() => {
+    if (!loading && user) {
+      // Add a small delay to ensure auth context is fully initialized
+      const timer = setTimeout(() => {
+        setShouldRedirect(true);
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [loading, user]);
+  
+  if (shouldRedirect) {
+    return <Navigate to="/browse" replace />;
+  }
   
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-green-50 to-white">
@@ -21,7 +40,12 @@ const Index = () => {
         </p>
         
         <div className="grid gap-4 w-full max-w-xs">
-          {user ? (
+          {loading ? (
+            <div className="text-center py-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-golf-green-dark mx-auto mb-2"></div>
+              <p className="text-sm text-gray-500">Laddar...</p>
+            </div>
+          ) : user ? (
             <>
               <Link to="/browse">
                 <Button 

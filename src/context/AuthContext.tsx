@@ -32,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [authError, setAuthError] = useState<Error | null>(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [connectionOk, setConnectionOk] = useState(true);
+  const [authTimeout, setAuthTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const fetchProfile = async (userId: string) => {
     if (!userId) return null;
@@ -136,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log("No session to recover");
         setReconnectAttempts(0); // Reset counter since we got a valid "no session" response
         setConnectionOk(true);
+        setLoading(false); // Important: Set loading to false when we know there's no session
         return false;
       }
     } catch (error) {
@@ -184,6 +186,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log("No active session found");
         }
         
+        // Set a timeout to ensure loading state doesn't get stuck
+        const timeout = setTimeout(() => {
+          if (loading) {
+            console.log("Auth loading timeout reached, forcing loading to false");
+            setLoading(false);
+          }
+        }, 5000); // 5 second timeout
+        
+        setAuthTimeout(timeout);
         setLoading(false);
         setAuthInitialized(true);
       } catch (error) {
@@ -282,6 +293,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (error) {
           console.error("Error unsubscribing from auth:", error);
         }
+      }
+      if (authTimeout) {
+        clearTimeout(authTimeout);
       }
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('online', handleOnline);
