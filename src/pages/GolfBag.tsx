@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Flag, Plus, Search } from "lucide-react";
+import { Flag, Plus, Search, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,8 +52,9 @@ const AddClubForm = ({ bagId, onSuccess, onCancel }: AddClubFormProps) => {
     mutationFn: (club: Omit<GolfClub, "id">) => {
       console.log('Mutation called with bag ID:', bagId);
       
-      // Validate UUID before proceeding
-      if (!bagId || bagId === "new" || typeof bagId !== 'string') {
+      // Extra validation - ensure UUID format
+      if (!bagId || bagId === "new" || typeof bagId !== 'string' || 
+          !bagId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)) {
         console.error('Invalid or missing bag ID:', bagId);
         throw new Error('A valid bag ID is required to add clubs');
       }
@@ -83,6 +84,17 @@ const AddClubForm = ({ bagId, onSuccess, onCancel }: AddClubFormProps) => {
     },
     onError: (error) => {
       console.error('Error in mutation:', error);
+      
+      // Handle specific error types
+      if ((error as Error).message?.includes('invalid input syntax for type uuid')) {
+        toast({
+          title: "Tekniskt fel",
+          description: "Problem med bag ID. Uppdatera sidan och försök igen.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       toast({
         title: "Ett fel inträffade",
         description: "Kunde inte lägga till klubban. Kontrollera din anslutning och försök igen.",
@@ -103,8 +115,8 @@ const AddClubForm = ({ bagId, onSuccess, onCancel }: AddClubFormProps) => {
       return;
     }
 
-    // Validate that we have a valid bag ID
-    if (!bagId || bagId === "new") {
+    // Enhanced validation that bag ID is a valid UUID
+    if (!bagId || bagId === "new" || !bagId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)) {
       console.error('Missing or invalid bagId when adding club:', bagId);
       toast({
         title: "Tekniskt fel",
@@ -218,11 +230,17 @@ const AddClubForm = ({ bagId, onSuccess, onCancel }: AddClubFormProps) => {
 };
 
 const GolfBagPage = () => {
-  const { user } = useAuth();
+  const { user, connectionOk } = useAuth();
   const [isAddingClub, setIsAddingClub] = useState(false);
   const { toast } = useToast();
   
-  const { data: bag, isLoading, error, refetch } = useQuery({
+  const { 
+    data: bag, 
+    isLoading, 
+    error, 
+    refetch,
+    isError 
+  } = useQuery({
     queryKey: ['golfBag', user?.id],
     queryFn: async () => {
       console.log('Fetching golf bag for user:', user?.id);
@@ -230,17 +248,31 @@ const GolfBagPage = () => {
         console.error('Missing user ID when fetching golf bag');
         return null;
       }
-      const result = await getGolfBag(user.id);
-      console.log('Fetched golf bag:', result);
       
-      if (!result) {
-        console.error('No golf bag found for user');
+      // Add explicit timeout to the query
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      try {
+        const result = await getGolfBag(user.id);
+        console.log('Fetched golf bag:', result);
+        
+        if (!result) {
+          console.error('No golf bag found for user');
+        }
+        
+        return result;
+      } catch (error) {
+        console.error('Error in golf bag query:', error);
+        throw error;
+      } finally {
+        clearTimeout(timeoutId);
       }
-      
-      return result;
     },
-    enabled: !!user?.id,
-    staleTime: 1000 * 30 // Consider data stale after 30 seconds
+    enabled: !!user?.id && connectionOk,
+    staleTime: 1000 * 30, // Consider data stale after 30 seconds
+    retry: 3,
+    retryDelay: attempt => Math.min(1000 * (2 ** attempt), 15000)
   });
 
   useEffect(() => {
@@ -260,6 +292,31 @@ const GolfBagPage = () => {
     refetch();
   };
 
+  if (!connectionOk) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white shadow-sm p-4">
+          <h1 className="text-xl font-bold text-golf-green-dark">Min Golfbag</h1>
+        </header>
+        <div className="container mx-auto p-4">
+          <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+            <h2 className="text-xl font-semibold mb-2 text-red-600">Anslutningsproblem</h2>
+            <p className="text-gray-600 mb-6">
+              Kunde inte ansluta till servern. Kontrollera din internetanslutning.
+            </p>
+            <Button 
+              className="bg-golf-green-dark hover:bg-golf-green-light"
+              onClick={() => window.location.reload()}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" /> Uppdatera sidan
+            </Button>
+          </div>
+        </div>
+        <Navbar />
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -268,7 +325,35 @@ const GolfBagPage = () => {
         </header>
         <div className="container mx-auto p-4">
           <div className="flex justify-center items-center h-64">
-            <p>Laddar...</p>
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-golf-green-dark mx-auto mb-4"></div>
+              <p>Laddar...</p>
+            </div>
+          </div>
+        </div>
+        <Navbar />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white shadow-sm p-4">
+          <h1 className="text-xl font-bold text-golf-green-dark">Min Golfbag</h1>
+        </header>
+        <div className="container mx-auto p-4">
+          <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+            <h2 className="text-xl font-semibold mb-2 text-red-600">Kunde inte ladda golfbag</h2>
+            <p className="text-gray-600 mb-6">
+              Det uppstod ett problem vid hämtning av din golfbag.
+            </p>
+            <Button 
+              className="bg-golf-green-dark hover:bg-golf-green-light"
+              onClick={handleRetry}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" /> Försök igen
+            </Button>
           </div>
         </div>
         <Navbar />
@@ -278,7 +363,7 @@ const GolfBagPage = () => {
 
   // Check if bag exists and has a valid ID before allowing club addition
   const showAddClubDialog = () => {
-    if (!bag?.id) {
+    if (!bag?.id || !bag.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)) {
       toast({
         title: "Skapa golfbag först",
         description: "Vi behöver skapa en golfbag åt dig innan du kan lägga till klubbor. Uppdatera sidan och försök igen.",

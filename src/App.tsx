@@ -29,7 +29,7 @@ const queryClient = new QueryClient({
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, connectionOk } = useAuth();
   const [isAuthCheck, setIsAuthCheck] = useState(true);
   
   useEffect(() => {
@@ -48,6 +48,28 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-golf-green-dark mx-auto mb-4"></div>
           <p className="text-golf-green-dark">Laddar...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!connectionOk) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-red-50">
+        <div className="text-center max-w-md p-6 bg-white rounded-lg shadow-lg">
+          <h2 className="text-xl font-semibold text-red-600 mb-4">Anslutningsproblem</h2>
+          <p className="mb-4">Det gick inte att ansluta till servern. Detta kan bero på:</p>
+          <ul className="list-disc text-left ml-6 mb-4">
+            <li>Tillfälligt serverfel</li>
+            <li>Problem med din internetanslutning</li>
+            <li>Din session har upphört</li>
+          </ul>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors"
+          >
+            Uppdatera sidan
+          </button>
         </div>
       </div>
     );
@@ -81,12 +103,26 @@ const App = () => {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   useEffect(() => {
+    // Clear any lingering "connection" errors stored in sessionStorage
+    try {
+      sessionStorage.removeItem('supabase.error.connection');
+    } catch (err) {
+      console.error('Error accessing sessionStorage:', err);
+    }
+    
     // Global error handler for unhandled promise rejections
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       console.error("Unhandled promise rejection:", event.reason);
       
       // Don't show error for expected auth errors when not logged in
       if (event.reason?.message?.includes("AuthProvider")) {
+        return;
+      }
+      
+      // Don't crash on "Could not establish connection" errors
+      if (event.reason?.message?.includes("Could not establish connection")) {
+        console.log("Suppressing 'Could not establish connection' error - likely an extension issue");
+        // This error often comes from browser extensions trying to access the page
         return;
       }
       

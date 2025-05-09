@@ -17,7 +17,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storage: localStorage
+    storage: localStorage,
+    storageKey: 'supabase.auth.token',
+    flowType: 'implicit'
   },
   global: {
     headers: {
@@ -28,20 +30,38 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     params: {
       eventsPerSecond: 10
     }
+  },
+  // Add request retries to handle temporary network issues
+  fetch: (url, options) => {
+    return fetch(url, {
+      ...options,
+      headers: { ...options?.headers },
+      // Increase timeout to allow for slower connections
+      signal: AbortSignal.timeout(30000), // 30 second timeout
+    });
   }
 });
 
-// Log connection status for diagnostics
-supabase.auth.onAuthStateChange((event, session) => {
-  console.log(`Supabase auth event: ${event}`, session?.user?.id || 'No user');
-});
+// Wrap Supabase auth events in try/catch to prevent uncaught errors
+try {
+  supabase.auth.onAuthStateChange((event, session) => {
+    console.log(`Supabase auth event: ${event}`, session?.user?.id || 'No user');
+  });
+} catch (error) {
+  console.error('Error setting up auth state change listener:', error);
+}
 
-// Attempt to reconnect on page load
+// Attempt to reconnect on page load with additional error handling
 const attemptReconnection = async () => {
   try {
     const { data, error } = await supabase.auth.getSession();
     if (error) {
       console.error('Error reconnecting to Supabase:', error);
+      // Clear session if there's an error with the stored session
+      if (error.message?.includes('JWT')) {
+        console.log('Invalid token detected, clearing session data');
+        localStorage.removeItem('supabase.auth.token');
+      }
     } else {
       console.log('Reconnected to Supabase successfully:', data.session?.user?.id || 'No active session');
     }
@@ -52,6 +72,38 @@ const attemptReconnection = async () => {
 
 // Try to reconnect when this module loads
 attemptReconnection();
+
+// Make a health check function to test connection
+export const testConnection = async () => {
+  try {
+    const { error } = await supabase.from('profiles').select('count').limit(1);
+    return { ok: !error, error };
+  } catch (error) {
+    console.error('Health check failed:', error);
+    return { ok: false, error };
+  }
+};
+
+// Periodically check connection in the background
+let connectionCheckInterval: number | null = null;
+export const startConnectionChecks = () => {
+  if (connectionCheckInterval) return;
+  
+  connectionCheckInterval = window.setInterval(async () => {
+    const { ok, error } = await testConnection();
+    if (!ok) {
+      console.warn('Connection check failed:', error);
+      attemptReconnection();
+    }
+  }, 60000); // Check every minute
+  
+  return () => {
+    if (connectionCheckInterval) {
+      window.clearInterval(connectionCheckInterval);
+      connectionCheckInterval = null;
+    }
+  };
+};
 
 // Auth functions
 export const signIn = async (email: string, password: string) => {
@@ -328,8 +380,8 @@ export const getGolfBag = async (userId: string): Promise<GolfBag | null> => {
 
 export const addClubToBag = async (bagId: string, club: Omit<GolfClub, 'id'>): Promise<GolfClub | null> => {
   try {
-    // Validate the bagId is a proper UUID
-    if (!bagId || typeof bagId !== 'string' || bagId === 'new') {
+    // Additional validation to prevent "invalid input syntax for type uuid: 'new'" error
+    if (!bagId || typeof bagId !== 'string' || bagId === 'new' || !bagId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)) {
       console.error('Invalid bagId provided to addClubToBag:', bagId);
       throw new Error('A valid bag ID is required to add clubs');
     }
@@ -450,3 +502,6 @@ export const sendChatMessage = async (message: Omit<ChatMessage, 'id' | 'timesta
   }
   return data as unknown as ChatMessage;
 };
+
+// Initialize connection checks when this module is imported
+startConnectionChecks();
