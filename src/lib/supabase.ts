@@ -573,7 +573,7 @@ export const getMatches = async (userId: string): Promise<Match[]> => {
     const { data, error } = await supabase
       .from('matches')
       .select('*')
-      .or(`golferId.eq.${userId},matchedWithId.eq.${userId}`);
+      .or(`golfer_id.eq.${userId},matched_with_id.eq.${userId}`);
     
     if (error) {
       console.error('Error fetching matches:', error);
@@ -586,7 +586,19 @@ export const getMatches = async (userId: string): Promise<Match[]> => {
     }
     
     console.log(`Found ${data.length} matches for user:`, userId);
-    return data as unknown as Match[];
+    
+    // Map the database fields to our Match type
+    const matches: Match[] = data.map(item => ({
+      id: item.id,
+      golferId: item.golfer_id,  // Convert from snake_case to camelCase
+      matchedWithId: item.matched_with_id,  // Convert from snake_case to camelCase
+      timestamp: item.timestamp,
+      read: item.read,
+      status: item.status,
+      lastMessage: item.last_message
+    }));
+    
+    return matches;
   } catch (error) {
     console.error('Unexpected error in getMatches:', error);
     return [];
@@ -607,8 +619,8 @@ export const createMatch = async (match: Omit<Match, 'id'>): Promise<Match | nul
       .from('matches')
       .select('*')
       .or(
-        `and(golferId.eq.${match.golferId},matchedWithId.eq.${match.matchedWithId}),` +
-        `and(golferId.eq.${match.matchedWithId},matchedWithId.eq.${match.golferId})`
+        `and(golfer_id.eq.${match.golferId},matched_with_id.eq.${match.matchedWithId}),` +
+        `and(golfer_id.eq.${match.matchedWithId},matched_with_id.eq.${match.golferId})`
       );
     
     if (checkError) {
