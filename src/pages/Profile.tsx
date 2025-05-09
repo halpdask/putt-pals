@@ -1,20 +1,94 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Flag, Settings, LogOut } from "lucide-react";
 import Navbar from "../components/Navbar";
 import ProfileForm from "../components/ProfileForm";
-import { currentUserProfile } from "../data/mockGolfers";
 import { GolferProfile } from "../types/golfer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "../context/AuthContext";
+import { getProfile, updateProfile, signOut } from "../lib/supabase";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/components/ui/use-toast";
+import { useQuery } from "@tanstack/react-query";
 
 const Profile = () => {
-  const [profile, setProfile] = useState<GolferProfile>(currentUserProfile);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  // Fetch profile data from Supabase
+  const { data: profile, isLoading, isError, refetch } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: () => user ? getProfile(user.id) : null,
+    enabled: !!user,
+  });
 
-  const handleSaveProfile = (updatedProfile: GolferProfile) => {
-    setProfile(updatedProfile);
+  // Handle sign out
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate("/login");
+    } catch (error) {
+      console.error("Error signing out:", error);
+      toast({
+        title: "Utloggning misslyckades",
+        description: "Försök igen senare.",
+        variant: "destructive",
+      });
+    }
   };
+
+  const handleSaveProfile = async (updatedProfile: GolferProfile) => {
+    try {
+      // Make sure the ID is set correctly
+      if (user && profile) {
+        updatedProfile.id = user.id;
+        await updateProfile(updatedProfile);
+        toast({
+          title: "Profil uppdaterad",
+          description: "Dina profiländringar har sparats",
+        });
+        refetch(); // Refresh profile data
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Ett fel inträffade",
+        description: "Kunde inte uppdatera profil",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-16 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-golf-green-dark mx-auto mb-4"></div>
+          <p className="text-golf-green-dark">Laddar profil...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError || !profile) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-16 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 font-semibold">Kunde inte ladda profilen. Vänligen försök igen senare.</p>
+          <Button 
+            onClick={() => refetch()}
+            className="mt-4 bg-golf-green-dark hover:bg-golf-green-light"
+          >
+            Försök igen
+          </Button>
+        </div>
+        <Navbar />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
@@ -24,7 +98,10 @@ const Profile = () => {
           <button className="p-2 rounded-full hover:bg-gray-100">
             <Settings size={20} />
           </button>
-          <button className="p-2 rounded-full hover:bg-gray-100">
+          <button 
+            className="p-2 rounded-full hover:bg-gray-100"
+            onClick={handleSignOut}
+          >
             <LogOut size={20} />
           </button>
         </div>
@@ -70,7 +147,74 @@ const Profile = () => {
           <TabsContent value="preferences" className="bg-white rounded-lg shadow-sm p-6">
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Matchning Preferenser</h3>
-              <p className="text-gray-500">Funktionen kommer snart...</p>
+              
+              <div className="space-y-4">
+                <div className="form-group">
+                  <label className="block text-gray-700 mb-2">Sökradie (km)</label>
+                  <input 
+                    type="range" 
+                    min="5" 
+                    max="200" 
+                    step="5"
+                    defaultValue={profile.search_radius_km}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between mt-1">
+                    <span className="text-sm">{profile.search_radius_km} km</span>
+                    <span className="text-sm text-gray-500">Max 200 km</span>
+                  </div>
+                </div>
+                
+                <div className="form-group">
+                  <label className="block text-gray-700 mb-2">Max handicap-skillnad</label>
+                  <input 
+                    type="range" 
+                    min="1" 
+                    max="54" 
+                    step="1"
+                    defaultValue={profile.max_handicap_difference}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between mt-1">
+                    <span className="text-sm">±{profile.max_handicap_difference}</span>
+                    <span className="text-sm text-gray-500">Max ±54</span>
+                  </div>
+                </div>
+                
+                <div className="form-group">
+                  <label className="block text-gray-700 mb-2">Åldersintervall</label>
+                  <div className="flex items-center space-x-2">
+                    <input 
+                      type="number" 
+                      min="18" 
+                      max="100"
+                      defaultValue={profile.min_age_preference}
+                      className="w-20 border p-2 rounded"
+                    />
+                    <span>till</span>
+                    <input 
+                      type="number" 
+                      min="18" 
+                      max="100"
+                      defaultValue={profile.max_age_preference}
+                      className="w-20 border p-2 rounded"
+                    />
+                    <span>år</span>
+                  </div>
+                </div>
+                
+                <Button 
+                  className="w-full bg-golf-green-dark hover:bg-golf-green-light mt-4"
+                  onClick={() => {
+                    toast({
+                      title: "Kommer snart",
+                      description: "Denna funktion är under utveckling",
+                    })
+                  }}
+                >
+                  Spara preferenser
+                </Button>
+              </div>
             </div>
           </TabsContent>
         </Tabs>

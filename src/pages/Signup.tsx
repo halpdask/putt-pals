@@ -66,9 +66,10 @@ const Signup = () => {
       
       toast({
         title: "Konto skapat!",
-        description: "Du kan nu logga in med dina uppgifter.",
+        description: "Nu kan du slutföra din profil.",
       });
-      navigate("/login");
+      // Redirect to complete profile instead of login
+      navigate("/complete-profile");
     } catch (error: any) {
       console.error("Unexpected signup error:", error);
       toast({

@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider"; 
 import { useToast } from "@/components/ui/use-toast";
 
 interface ProfileFormProps {
@@ -73,6 +74,22 @@ const ProfileForm = ({ profile, onSave }: ProfileFormProps) => {
 
   const handleGenderChange = (value: "Man" | "Kvinna" | "Annat") => {
     setFormData({ ...formData, gender: value });
+  };
+  
+  const handleSearchRadiusChange = (value: number[]) => {
+    setFormData({ ...formData, search_radius_km: value[0] });
+  };
+  
+  const handleHandicapDifferenceChange = (value: number[]) => {
+    setFormData({ ...formData, max_handicap_difference: value[0] });
+  };
+  
+  const handlePreferredAgeRangeChange = (min: number, max: number) => {
+    setFormData({ 
+      ...formData, 
+      min_age_preference: min,
+      max_age_preference: max
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -214,6 +231,70 @@ const ProfileForm = ({ profile, onSave }: ProfileFormProps) => {
               <Label htmlFor={`availability-${option.value}`}>{option.label}</Label>
             </div>
           ))}
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="search_radius_km">Sökradie (km)</Label>
+        <Slider
+          id="search_radius_km"
+          defaultValue={[formData.search_radius_km]}
+          min={5}
+          max={200}
+          step={5}
+          onValueChange={handleSearchRadiusChange}
+        />
+        <div className="flex justify-between mt-1 text-sm text-gray-600">
+          <span>5 km</span>
+          <span>{formData.search_radius_km} km</span>
+          <span>200 km</span>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="max_handicap_difference">Max handicap-skillnad</Label>
+        <Slider
+          id="max_handicap_difference"
+          defaultValue={[formData.max_handicap_difference]}
+          min={1}
+          max={54}
+          step={1}
+          onValueChange={handleHandicapDifferenceChange}
+        />
+        <div className="flex justify-between mt-1 text-sm text-gray-600">
+          <span>±1</span>
+          <span>±{formData.max_handicap_difference}</span>
+          <span>±54</span>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Åldersintervall</Label>
+        <div className="flex items-center space-x-2">
+          <Input 
+            type="number" 
+            min="18" 
+            max="100"
+            value={formData.min_age_preference}
+            onChange={(e) => handlePreferredAgeRangeChange(
+              parseInt(e.target.value) || 18,
+              formData.max_age_preference
+            )}
+            className="w-20"
+          />
+          <span>till</span>
+          <Input 
+            type="number" 
+            min="18" 
+            max="100"
+            value={formData.max_age_preference}
+            onChange={(e) => handlePreferredAgeRangeChange(
+              formData.min_age_preference,
+              parseInt(e.target.value) || 100
+            )}
+            className="w-20"
+          />
+          <span>år</span>
         </div>
       </div>
 

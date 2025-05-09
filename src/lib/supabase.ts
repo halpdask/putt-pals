@@ -333,6 +333,10 @@ export const updateProfile = async (profile: GolferProfile): Promise<GolferProfi
       profile_image: profile.profileImage || '',
       round_types: profile.roundTypes || ['Sällskapsrunda'],
       availability: profile.availability || ['Helger'],
+      search_radius_km: profile.search_radius_km || 50,
+      max_handicap_difference: profile.max_handicap_difference || 10,
+      min_age_preference: profile.min_age_preference || 18,
+      max_age_preference: profile.max_age_preference || 100,
     };
     
     const { data, error } = await supabase
@@ -360,6 +364,10 @@ export const updateProfile = async (profile: GolferProfile): Promise<GolferProfi
       profileImage: data.profile_image || '',
       roundTypes: data.round_types || ['Sällskapsrunda'],
       availability: data.availability || ['Helger'],
+      search_radius_km: data.search_radius_km || 50,
+      max_handicap_difference: data.max_handicap_difference || 10,
+      min_age_preference: data.min_age_preference || 18,
+      max_age_preference: data.max_age_preference || 100,
     } as GolferProfile;
   } catch (error) {
     console.error('Error in updateProfile:', error);
