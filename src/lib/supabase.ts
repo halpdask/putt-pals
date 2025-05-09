@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { GolferProfile, GolfBag, GolfClub, Match, ChatMessage } from '../types/golfer';
 
@@ -331,6 +332,15 @@ export const getGolfBag = async (userId: string): Promise<GolfBag | null> => {
     if (!bagData) {
       console.log('No bag found for user, creating new bag:', userId);
       
+      // Explicitly set the RLS fields user_id to match the current authenticated user
+      const session = await supabase.auth.getSession();
+      const currentUserId = session.data.session?.user?.id;
+      
+      if (!currentUserId || currentUserId !== userId) {
+        console.error('Authentication mismatch. Cannot create a bag for another user:', { currentUserId, requestedUserId: userId });
+        return null;
+      }
+      
       const { data: newBag, error: createError } = await supabase
         .from('golf_bags')
         .insert({
@@ -342,6 +352,10 @@ export const getGolfBag = async (userId: string): Promise<GolfBag | null> => {
       
       if (createError) {
         console.error('Error creating golf bag:', createError);
+        // Check if it's an RLS error
+        if (createError.code === '42501' || createError.message?.includes('policy')) {
+          console.error('This appears to be an RLS policy error. Make sure the RLS policies are configured correctly in Supabase.');
+        }
         return null;
       }
       
