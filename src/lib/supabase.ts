@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { GolferProfile, GolfBag, GolfClub, Match, ChatMessage } from '../types/golfer';
+import { mockGolfers } from '../data/mockGolfers'; // Add this import
 
 // When using Lovable's Supabase integration, these variables are automatically injected
 const supabaseUrl = "https://fsazjbyvxrqpwjajfmkz.supabase.co";
