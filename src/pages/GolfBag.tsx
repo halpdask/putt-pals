@@ -49,12 +49,24 @@ const AddClubForm = ({ bagId, onSuccess, onCancel }: AddClubFormProps) => {
 
   const addClubMutation = useMutation({
     mutationFn: (club: Omit<GolfClub, "id">) => {
-      console.log('Mutation called with:', bagId, club);
+      console.log('Mutation called with bag ID:', bagId);
+      console.log('Club data being sent:', club);
       return addClubToBag(bagId, club);
     },
     onSuccess: (data) => {
-      console.log('Club added successfully:', data);
-      queryClient.invalidateQueries({ queryKey: ['golfBag'] });
+      if (!data) {
+        console.error('Club addition succeeded but returned null data');
+        toast({
+          title: "Varning",
+          description: "Klubban kan ha lagts till, men vi kunde inte bekräfta. Uppdatera sidan för att se.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      console.log('Club added successfully, returned data:', data);
+      // Force a fresh refetch from server
+      queryClient.invalidateQueries({ queryKey: ['golfBag'], refetchType: 'all' });
       toast({
         title: "Klubba tillagd",
         description: "Klubban har lagts till i din bag"
@@ -65,7 +77,7 @@ const AddClubForm = ({ bagId, onSuccess, onCancel }: AddClubFormProps) => {
       console.error('Error in mutation:', error);
       toast({
         title: "Ett fel inträffade",
-        description: "Kunde inte lägga till klubban",
+        description: "Kunde inte lägga till klubban. Kontrollera din anslutning och försök igen.",
         variant: "destructive"
       });
     }
@@ -83,16 +95,27 @@ const AddClubForm = ({ bagId, onSuccess, onCancel }: AddClubFormProps) => {
       return;
     }
 
+    if (!bagId) {
+      console.error('Missing bagId when adding club');
+      toast({
+        title: "Tekniskt fel",
+        description: "Kunde inte identifiera din golfbag. Prova att uppdatera sidan.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const newClub = {
       brand,
       model,
       type,
       loft,
-      notes: notes || undefined
+      notes: notes || undefined,
+      bag_id: bagId // Explicitly set the bag_id here too
     };
 
     console.log('Submitting new club:', newClub, 'to bag:', bagId);
-    addClubMutation.mutate(newClub as GolfClub);
+    addClubMutation.mutate(newClub);
   };
 
   return (
@@ -190,16 +213,25 @@ const GolfBagPage = () => {
   const [isAddingClub, setIsAddingClub] = useState(false);
   const { toast } = useToast();
   
-  const { data: bag, isLoading, error } = useQuery({
+  const { data: bag, isLoading, error, refetch } = useQuery({
     queryKey: ['golfBag', user?.id],
     queryFn: async () => {
       console.log('Fetching golf bag for user:', user?.id);
-      if (!user?.id) return null;
+      if (!user?.id) {
+        console.error('Missing user ID when fetching golf bag');
+        return null;
+      }
       const result = await getGolfBag(user.id);
       console.log('Fetched golf bag:', result);
+      
+      if (!result) {
+        console.error('No golf bag found for user');
+      }
+      
       return result;
     },
-    enabled: !!user?.id
+    enabled: !!user?.id,
+    staleTime: 1000 * 30 // Consider data stale after 30 seconds
   });
 
   useEffect(() => {
@@ -212,6 +244,12 @@ const GolfBagPage = () => {
       });
     }
   }, [error, toast]);
+
+  // Add a retry button in case fetching fails
+  const handleRetry = () => {
+    console.log('Retrying golf bag fetch');
+    refetch();
+  };
 
   if (isLoading) {
     return (

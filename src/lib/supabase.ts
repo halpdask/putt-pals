@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { GolferProfile, GolfBag, GolfClub, Match, ChatMessage } from '../types/golfer';
 
@@ -338,19 +339,33 @@ export const addClubToBag = async (bagId: string, club: Omit<GolfClub, 'id'>): P
     
     console.log('Club data to insert:', clubData);
     
-    const { data, error } = await supabase
+    // Refactor to provide more detailed error handling
+    const result = await supabase
       .from('clubs')
       .insert(clubData)
       .select()
       .single();
-    
-    if (error) {
-      console.error('Error adding club to bag:', error);
+      
+    if (result.error) {
+      console.error('Error details from Supabase:', result.error);
+      // Check specific error codes
+      if (result.error.code === '23503') { // Foreign key violation
+        console.error('Foreign key constraint failed. Make sure the bag_id exists:', bagId);
+      } else if (result.error.code === '23505') { // Unique violation
+        console.error('Uniqueness constraint violated. This club might already exist.');
+      } else if (result.error.code === '42501') { // Permission denied
+        console.error('Permission denied. Check Row Level Security policies for the clubs table.');
+      }
       return null;
     }
     
-    console.log('Successfully added club:', data);
-    return data as unknown as GolfClub;
+    if (!result.data) {
+      console.error('No data returned after insert. The operation might have succeeded but returned no data.');
+      return null;
+    }
+    
+    console.log('Successfully added club:', result.data);
+    return result.data as unknown as GolfClub;
   } catch (error) {
     console.error('Unexpected error in addClubToBag:', error);
     return null;

@@ -78,6 +78,7 @@ const AppRoutes = () => {
 const App = () => {
   // Add error boundary handling
   const [hasError, setHasError] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   useEffect(() => {
     // Global error handler for unhandled promise rejections
@@ -98,8 +99,24 @@ const App = () => {
     };
 
     // Handle connection errors
+    const handleOffline = () => {
+      console.log("Connection lost. App is now offline.");
+      setIsOffline(true);
+      toast({
+        title: "Ingen internetanslutning",
+        description: "Kontrollera din anslutning och försök igen.",
+        variant: "destructive",
+      });
+    };
+
     const handleOnline = () => {
       console.log("Connection restored. Refreshing app state...");
+      setIsOffline(false);
+      toast({
+        title: "Anslutningen återställd",
+        description: "Du är online igen.",
+      });
+      
       // Only reload if there was an error
       if (hasError) {
         window.location.reload();
@@ -108,10 +125,12 @@ const App = () => {
 
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
     window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
     
     return () => {
       window.removeEventListener('unhandledrejection', handleUnhandledRejection);
       window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, [hasError]);
 
