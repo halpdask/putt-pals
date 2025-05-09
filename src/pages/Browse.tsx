@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import Navbar from "../components/Navbar";
 import GolferCard from "../components/GolferCard";
-import { mockGolfers } from "../data/mockGolfers";
 import { Badge } from "@/components/ui/badge";
 import { Filter } from "lucide-react";
 import { 
@@ -19,6 +18,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { GolferProfile, RoundType } from "../types/golfer";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../context/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { getAllProfiles, createMatch } from "../lib/supabase";
+import { mockGolfers } from "../data/mockGolfers"; // Keep as fallback
 
 interface FilterOptions {
   handicapRange: [number, number];
@@ -29,17 +31,24 @@ interface FilterOptions {
 
 const Browse = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [remainingGolfers, setRemainingGolfers] = useState([...mockGolfers]);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     handicapRange: [0, 54],
     ageRange: [18, 80],
     maxDistance: 50,
     roundTypes: [],
   });
-  const [filteredGolfers, setFilteredGolfers] = useState([...mockGolfers]);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const { toast } = useToast();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
+  
+  // Fetch profiles from the database
+  const { data: fetchedProfiles, isLoading, isError } = useQuery({
+    queryKey: ['profiles', user?.id],
+    queryFn: () => user?.id ? getAllProfiles(user.id) : Promise.resolve([]),
+    enabled: !!user?.id,
+  });
+  
+  const [filteredGolfers, setFilteredGolfers] = useState<GolferProfile[]>([]);
 
   const roundTypeOptions: { value: RoundType; label: string }[] = [
     { value: "Sällskapsrunda", label: "Sällskapsrunda" },
@@ -50,12 +59,14 @@ const Browse = () => {
   ];
 
   useEffect(() => {
-    // Shuffle golfers for variety and apply initial filters
-    const shuffled = [...mockGolfers].sort(() => Math.random() - 0.5);
-    applyFilters(shuffled);
-  }, []);
+    if (fetchedProfiles && fetchedProfiles.length > 0) {
+      // Shuffle profiles for variety and apply initial filters
+      const shuffled = [...fetchedProfiles].sort(() => Math.random() - 0.5);
+      applyFilters(shuffled);
+    }
+  }, [fetchedProfiles]);
 
-  const applyFilters = (golfers = remainingGolfers) => {
+  const applyFilters = (golfers = fetchedProfiles || []) => {
     const userHcp = profile?.handicap || 18;
 
     const filtered = golfers.filter(golfer => {
@@ -92,14 +103,42 @@ const Browse = () => {
     setFiltersOpen(false);
   };
 
-  const handleLike = (id: string) => {
-    toast({
-      title: "Matchning!",
-      description: "Du gillade denna golfaren",
-      variant: "default",
-    });
+  const handleLike = async (id: string) => {
+    if (!user) {
+      toast({
+        title: "Logga in först",
+        description: "Du måste vara inloggad för att matcha med andra golfare",
+        variant: "destructive",
+      });
+      return;
+    }
     
-    // In a real app, you would send this match to a backend
+    // Create a match in the database
+    try {
+      const match = {
+        golferId: user.id,
+        matchedWithId: id,
+        timestamp: Date.now(),
+        read: false,
+        status: 'pending' as const
+      };
+      
+      await createMatch(match);
+      
+      toast({
+        title: "Matchning!",
+        description: "Du gillade denna golfaren",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Error creating match:", error);
+      toast({
+        title: "Ett fel uppstod",
+        description: "Kunde inte skapa matchning just nu",
+        variant: "destructive",
+      });
+    }
+    
     goToNextGolfer();
   };
 
@@ -142,7 +181,37 @@ const Browse = () => {
     return `${value}`;
   };
 
-  const currentGolfer = filteredGolfers[currentIndex];
+  // Show loading state while fetching profiles
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-16 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-golf-green-dark font-semibold">Laddar golfare...</p>
+        </div>
+        <Navbar />
+      </div>
+    );
+  }
+
+  // Show error state if there was an issue fetching profiles
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-16 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 font-semibold">Det gick inte att hämta golfprofilerna just nu.</p>
+          <Button 
+            onClick={() => window.location.reload()}
+            className="mt-4 bg-golf-green-dark hover:bg-golf-green-light"
+          >
+            Försök igen
+          </Button>
+        </div>
+        <Navbar />
+      </div>
+    );
+  }
+
+  const currentGolfer = filteredGolfers.length > 0 ? filteredGolfers[currentIndex % filteredGolfers.length] : null;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16">

@@ -6,10 +6,10 @@ import { sv } from "date-fns/locale";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { getMatches } from "../lib/supabase";
+import { getMatches, getProfile } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 import ChatDialog from "./ChatDialog";
-import { mockGolfers } from "../data/mockGolfers"; // Temporary until we have real profiles
+import { mockGolfers } from "../data/mockGolfers"; // Keep as fallback
 
 interface MatchListProps {
   matches?: Match[];
@@ -20,7 +20,7 @@ const MatchList = ({ matches: initialMatches }: MatchListProps) => {
   const [matchedProfiles, setMatchedProfiles] = useState<GolferProfile[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<{match: Match, profile: GolferProfile} | null>(null);
   
-  const { data: fetchedMatches, isLoading } = useQuery({
+  const { data: fetchedMatches, isLoading: isLoadingMatches } = useQuery({
     queryKey: ['matches', user?.id],
     queryFn: () => user ? getMatches(user.id) : [],
     enabled: !!user,
@@ -29,18 +29,39 @@ const MatchList = ({ matches: initialMatches }: MatchListProps) => {
 
   const matches = fetchedMatches || initialMatches || [];
 
+  // Fetch profile data for each match
   useEffect(() => {
-    // In a real app, you would fetch these profiles from an API
-    // For now, use the mock data
-    const profiles = matches.map(match => {
-      const matchedId = match.golferId === user?.id ? match.matchedWithId : match.golferId;
-      return mockGolfers.find(golfer => golfer.id === matchedId);
-    }).filter((profile): profile is GolferProfile => profile !== undefined);
+    const fetchMatchedProfiles = async () => {
+      if (!matches.length) return;
+      
+      const profiles: GolferProfile[] = [];
+      
+      for (const match of matches) {
+        const matchedId = match.golferId === user?.id ? match.matchedWithId : match.golferId;
+        try {
+          // Try to get the profile from the database
+          const fetchedProfile = await getProfile(matchedId);
+          if (fetchedProfile) {
+            profiles.push(fetchedProfile);
+          } else {
+            // Fallback to mock data if profile not found
+            const mockProfile = mockGolfers.find(golfer => golfer.id === matchedId);
+            if (mockProfile) {
+              profiles.push(mockProfile);
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching profile for ID ${matchedId}:`, error);
+        }
+      }
+      
+      setMatchedProfiles(profiles);
+    };
     
-    setMatchedProfiles(profiles);
+    fetchMatchedProfiles();
   }, [matches, user?.id]);
 
-  if (isLoading) {
+  if (isLoadingMatches) {
     return (
       <div className="text-center py-10">
         <p className="text-gray-500">Laddar matchningar...</p>

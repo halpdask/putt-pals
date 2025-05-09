@@ -209,6 +209,55 @@ export const getProfile = async (userId: string): Promise<GolferProfile | null> 
   }
 };
 
+// New function to get all profiles for browsing
+export const getAllProfiles = async (currentUserId: string): Promise<GolferProfile[]> => {
+  try {
+    console.log('Fetching all profiles for browsing, excluding current user:', currentUserId);
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .neq('id', currentUserId);
+    
+    if (error) {
+      console.error('Error fetching profiles:', error);
+      return [];
+    }
+    
+    if (!data || data.length === 0) {
+      console.log('No profiles found');
+      // Return mock data as fallback if no real profiles exist yet
+      return mockGolfers.filter(golfer => golfer.id !== currentUserId);
+    }
+    
+    console.log(`Successfully retrieved ${data.length} profiles`);
+    
+    // Map database fields to our GolferProfile type
+    const profiles: GolferProfile[] = data.map(item => ({
+      id: item.id,
+      name: item.name || '',
+      age: item.age || 30,
+      gender: item.gender || 'Man',
+      handicap: item.handicap || 18,
+      homeCourse: item.home_course || '',
+      location: item.location || '',
+      bio: item.bio || '',
+      profileImage: item.profile_image || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.0.3',
+      roundTypes: item.round_types || ['Sällskapsrunda'],
+      availability: item.availability || ['Helger'],
+      search_radius_km: item.search_radius_km || 50,
+      max_handicap_difference: item.max_handicap_difference || 10,
+      min_age_preference: item.min_age_preference || 18,
+      max_age_preference: item.max_age_preference || 100,
+    }));
+    
+    return profiles;
+  } catch (error) {
+    console.error('Unexpected error in getAllProfiles:', error);
+    return [];
+  }
+};
+
 export const createProfile = async (profile: Partial<GolferProfile>): Promise<GolferProfile | null> => {
   try {
     // Convert our GolferProfile to match database schema and ensure required fields have default values
