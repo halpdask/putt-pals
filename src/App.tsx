@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +15,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import GolfBag from "./pages/GolfBag";
 import CompleteProfile from "./pages/CompleteProfile";
+import Navbar from "./components/Navbar";
 
 // Configure the query client with retry logic
 const queryClient = new QueryClient({
@@ -28,7 +28,7 @@ const queryClient = new QueryClient({
   },
 });
 
-// Protected route component
+// Protected route component with Navbar
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, connectionOk } = useAuth();
   const [isAuthCheck, setIsAuthCheck] = useState(true);
@@ -111,7 +111,15 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/login" />;
   }
   
-  return <>{children}</>;
+  // Add Navbar for protected routes
+  return (
+    <>
+      {children}
+      <Navbar />
+      {/* Add bottom padding to ensure content isn't hidden behind the navbar */}
+      <div className="pb-16"></div>
+    </>
+  );
 };
 
 const AppRoutes = () => {

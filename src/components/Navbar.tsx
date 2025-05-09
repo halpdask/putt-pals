@@ -1,54 +1,74 @@
 
 import { Link, useLocation } from "react-router-dom";
 import { Search, User, MessageSquare, Home, Flag } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Navbar = () => {
   const location = useLocation();
+  const isMobile = useIsMobile();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white py-2 z-10">
+    <nav className="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white py-2 z-10 shadow-lg">
       <div className="container mx-auto flex items-center justify-around">
-        <Link 
-          to="/" 
-          className={`nav-link ${location.pathname === '/' ? 'active' : 'text-gray-500'}`}
-        >
-          <Home className={`w-6 h-6 ${location.pathname === '/' ? 'text-golf-green-dark' : 'text-gray-500'}`} />
-          <span>Hem</span>
-        </Link>
-        
-        <Link 
+        <NavLink 
           to="/browse" 
-          className={`nav-link ${location.pathname === '/browse' ? 'active' : 'text-gray-500'}`}
-        >
-          <Search className={`w-6 h-6 ${location.pathname === '/browse' ? 'text-golf-green-dark' : 'text-gray-500'}`} />
-          <span>Sök</span>
-        </Link>
+          icon={<Search />}
+          label="Sök"
+          isActive={location.pathname === '/browse'}
+          isMobile={isMobile}
+        />
         
-        <Link 
+        <NavLink 
           to="/matches" 
-          className={`nav-link ${location.pathname === '/matches' ? 'active' : 'text-gray-500'}`}
-        >
-          <MessageSquare className={`w-6 h-6 ${location.pathname === '/matches' ? 'text-golf-green-dark' : 'text-gray-500'}`} />
-          <span>Matchningar</span>
-        </Link>
+          icon={<MessageSquare />}
+          label="Matchningar"
+          isActive={location.pathname === '/matches'}
+          isMobile={isMobile}
+        />
 
-        <Link 
+        <NavLink 
           to="/golf-bag" 
-          className={`nav-link ${location.pathname === '/golf-bag' ? 'active' : 'text-gray-500'}`}
-        >
-          <Flag className={`w-6 h-6 ${location.pathname === '/golf-bag' ? 'text-golf-green-dark' : 'text-gray-500'}`} />
-          <span>Golfbag</span>
-        </Link>
+          icon={<Flag />}
+          label="Golfbag"
+          isActive={location.pathname === '/golf-bag'}
+          isMobile={isMobile}
+        />
         
-        <Link 
+        <NavLink 
           to="/profile" 
-          className={`nav-link ${location.pathname === '/profile' ? 'active' : 'text-gray-500'}`}
-        >
-          <User className={`w-6 h-6 ${location.pathname === '/profile' ? 'text-golf-green-dark' : 'text-gray-500'}`} />
-          <span>Profil</span>
-        </Link>
+          icon={<User />}
+          label="Profil"
+          isActive={location.pathname === '/profile'}
+          isMobile={isMobile}
+        />
       </div>
     </nav>
+  );
+};
+
+interface NavLinkProps {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  isActive: boolean;
+  isMobile: boolean;
+}
+
+const NavLink = ({ to, icon, label, isActive, isMobile }: NavLinkProps) => {
+  const activeClass = isActive ? 
+    "text-golf-green-dark bg-green-50 border-t-2 border-golf-green-dark" : 
+    "text-gray-500 hover:text-golf-green-dark";
+  
+  return (
+    <Link 
+      to={to} 
+      className={`flex flex-col items-center justify-center rounded-md px-3 py-2 transition-colors ${activeClass} ${isMobile ? 'flex-1' : 'px-5'}`}
+    >
+      <div className={`w-6 h-6 ${isActive ? 'text-golf-green-dark' : ''}`}>
+        {icon}
+      </div>
+      <span className={`text-xs mt-1 ${isActive ? 'font-medium' : ''}`}>{label}</span>
+    </Link>
   );
 };
 

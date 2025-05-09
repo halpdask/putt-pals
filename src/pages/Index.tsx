@@ -1,5 +1,5 @@
 
-import { Link, Navigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Flag, Users, LogIn, UserPlus } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -8,22 +8,9 @@ import { useEffect, useState } from "react";
 
 const Index = () => {
   const { user, loading } = useAuth();
-  const [isRedirecting, setIsRedirecting] = useState(false);
-  const [shouldRedirect, setShouldRedirect] = useState(false);
   
-  // Handle redirection for logged-in users after auth is confirmed
-  useEffect(() => {
-    if (!loading && user) {
-      // Add a small delay to ensure auth context is fully initialized
-      const timer = setTimeout(() => {
-        setShouldRedirect(true);
-      }, 300);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [loading, user]);
-  
-  if (shouldRedirect) {
+  // Immediately redirect logged-in users to the browse page
+  if (!loading && user) {
     return <Navigate to="/browse" replace />;
   }
   
@@ -45,51 +32,30 @@ const Index = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-golf-green-dark mx-auto mb-2"></div>
               <p className="text-sm text-gray-500">Laddar...</p>
             </div>
-          ) : user ? (
-            <>
-              <Link to="/browse">
-                <Button 
-                  className="w-full bg-golf-green-dark hover:bg-golf-green-light text-white p-6"
-                  size="lg"
-                >
-                  <Users className="mr-2 h-5 w-5" />
-                  Börja Matcha
-                </Button>
-              </Link>
-              
-              <Link to="/golf-bag">
-                <Button 
-                  variant="outline" 
-                  className="w-full border-golf-green-dark text-golf-green-dark hover:bg-green-50 p-6"
-                  size="lg"
-                >
-                  <Flag className="mr-2 h-5 w-5" />
-                  Hantera Din Golfbag
-                </Button>
-              </Link>
-            </>
           ) : (
             <>
-              <Link to="/login">
-                <Button 
-                  className="w-full bg-golf-green-dark hover:bg-golf-green-light text-white p-6"
-                  size="lg"
-                >
+              <Button 
+                className="w-full bg-golf-green-dark hover:bg-golf-green-light text-white p-6"
+                size="lg"
+                asChild
+              >
+                <a href="/login">
                   <LogIn className="mr-2 h-5 w-5" />
                   Logga In
-                </Button>
-              </Link>
+                </a>
+              </Button>
               
-              <Link to="/signup">
-                <Button 
-                  variant="outline" 
-                  className="w-full border-golf-green-dark text-golf-green-dark hover:bg-green-50 p-6"
-                  size="lg"
-                >
+              <Button 
+                variant="outline" 
+                className="w-full border-golf-green-dark text-golf-green-dark hover:bg-green-50 p-6"
+                size="lg"
+                asChild
+              >
+                <a href="/signup">
                   <UserPlus className="mr-2 h-5 w-5" />
                   Skapa Konto
-                </Button>
-              </Link>
+                </a>
+              </Button>
             </>
           )}
         </div>
