@@ -10,61 +10,62 @@ import { getMatches, getProfile } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 import ChatDialog from "./ChatDialog";
 import { mockGolfers } from "../data/mockGolfers"; // Keep as fallback
+import { Loader2 } from "lucide-react";
 
 interface MatchListProps {
-  matches?: Match[];
+  matches: Match[];
 }
 
-const MatchList = ({ matches: initialMatches }: MatchListProps) => {
+const MatchList = ({ matches }: MatchListProps) => {
   const { user } = useAuth();
   const [matchedProfiles, setMatchedProfiles] = useState<GolferProfile[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<{match: Match, profile: GolferProfile} | null>(null);
+  const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
   
-  const { data: fetchedMatches, isLoading: isLoadingMatches } = useQuery({
-    queryKey: ['matches', user?.id],
-    queryFn: () => user ? getMatches(user.id) : [],
-    enabled: !!user,
-    initialData: initialMatches || []
-  });
-
-  const matches = fetchedMatches || initialMatches || [];
-
   // Fetch profile data for each match
   useEffect(() => {
     const fetchMatchedProfiles = async () => {
       if (!matches.length) return;
       
+      setIsLoadingProfiles(true);
       const profiles: GolferProfile[] = [];
       
-      for (const match of matches) {
-        const matchedId = match.golferId === user?.id ? match.matchedWithId : match.golferId;
-        try {
-          // Try to get the profile from the database
-          const fetchedProfile = await getProfile(matchedId);
-          if (fetchedProfile) {
-            profiles.push(fetchedProfile);
-          } else {
-            // Fallback to mock data if profile not found
-            const mockProfile = mockGolfers.find(golfer => golfer.id === matchedId);
-            if (mockProfile) {
-              profiles.push(mockProfile);
+      try {
+        for (const match of matches) {
+          const matchedId = match.golferId === user?.id ? match.matchedWithId : match.golferId;
+          try {
+            // Try to get the profile from the database
+            const fetchedProfile = await getProfile(matchedId);
+            if (fetchedProfile) {
+              profiles.push(fetchedProfile);
+            } else {
+              // Fallback to mock data if profile not found
+              const mockProfile = mockGolfers.find(golfer => golfer.id === matchedId);
+              if (mockProfile) {
+                profiles.push(mockProfile);
+              }
             }
+          } catch (error) {
+            console.error(`Error fetching profile for ID ${matchedId}:`, error);
           }
-        } catch (error) {
-          console.error(`Error fetching profile for ID ${matchedId}:`, error);
         }
+        
+        setMatchedProfiles(profiles);
+      } catch (error) {
+        console.error('Error in fetchMatchedProfiles:', error);
+      } finally {
+        setIsLoadingProfiles(false);
       }
-      
-      setMatchedProfiles(profiles);
     };
     
     fetchMatchedProfiles();
   }, [matches, user?.id]);
 
-  if (isLoadingMatches) {
+  if (isLoadingProfiles) {
     return (
       <div className="text-center py-10">
-        <p className="text-gray-500">Laddar matchningar...</p>
+        <Loader2 className="h-8 w-8 animate-spin mx-auto text-golf-green-dark mb-2" />
+        <p className="text-gray-500">Laddar profiler...</p>
       </div>
     );
   }

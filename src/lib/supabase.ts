@@ -567,31 +567,84 @@ export const addClubToBag = async (bagId: string, club: Omit<GolfClub, 'id'>): P
 
 // Match functions
 export const getMatches = async (userId: string): Promise<Match[]> => {
-  const { data, error } = await supabase
-    .from('matches')
-    .select('*')
-    .or(`golferId.eq.${userId},matchedWithId.eq.${userId}`);
-  
-  if (error) {
-    console.error('Error fetching matches:', error);
+  try {
+    console.log('Fetching matches for user:', userId);
+    
+    const { data, error } = await supabase
+      .from('matches')
+      .select('*')
+      .or(`golferId.eq.${userId},matchedWithId.eq.${userId}`);
+    
+    if (error) {
+      console.error('Error fetching matches:', error);
+      return [];
+    }
+    
+    if (!data || data.length === 0) {
+      console.log('No matches found for user:', userId);
+      return [];
+    }
+    
+    console.log(`Found ${data.length} matches for user:`, userId);
+    return data as unknown as Match[];
+  } catch (error) {
+    console.error('Unexpected error in getMatches:', error);
     return [];
   }
-  if (!data) return [];
-  return data as unknown as Match[];
 };
 
 export const createMatch = async (match: Omit<Match, 'id'>): Promise<Match | null> => {
-  const { data, error } = await supabase
-    .from('matches')
-    .insert(match)
-    .select()
-    .single();
-  
-  if (error) {
-    console.error('Error creating match:', error);
-    return null;
+  try {
+    console.log('Creating match:', match);
+    
+    if (!match.golferId || !match.matchedWithId) {
+      console.error('Invalid match data, missing required fields:', match);
+      throw new Error('Invalid match data');
+    }
+    
+    // Check if a match already exists between these users (in either direction)
+    const { data: existingMatches, error: checkError } = await supabase
+      .from('matches')
+      .select('*')
+      .or(
+        `and(golferId.eq.${match.golferId},matchedWithId.eq.${match.matchedWithId}),` +
+        `and(golferId.eq.${match.matchedWithId},matchedWithId.eq.${match.golferId})`
+      );
+    
+    if (checkError) {
+      console.error('Error checking for existing matches:', checkError);
+      throw checkError;
+    }
+    
+    // If match already exists, return it instead of creating a new one
+    if (existingMatches && existingMatches.length > 0) {
+      console.log('Match already exists, returning existing match:', existingMatches[0]);
+      return existingMatches[0] as unknown as Match;
+    }
+    
+    // Create new match
+    const { data, error } = await supabase
+      .from('matches')
+      .insert(match)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating match:', error);
+      throw error;
+    }
+    
+    if (!data) {
+      console.error('No data returned from match creation');
+      return null;
+    }
+    
+    console.log('Successfully created match:', data);
+    return data as unknown as Match;
+  } catch (error) {
+    console.error('Unexpected error in createMatch:', error);
+    throw error;
   }
-  return data as unknown as Match;
 };
 
 // Messages functionality

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import Navbar from "../components/Navbar";
@@ -18,7 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { GolferProfile, RoundType } from "../types/golfer";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../context/AuthContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAllProfiles, createMatch } from "../lib/supabase";
 import { mockGolfers } from "../data/mockGolfers"; // Keep as fallback
 
@@ -40,6 +39,8 @@ const Browse = () => {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const { toast } = useToast();
   const { user, profile } = useAuth();
+  
+  const queryClient = useQueryClient();
   
   // Fetch profiles from the database
   const { data: fetchedProfiles, isLoading, isError } = useQuery({
@@ -120,16 +121,23 @@ const Browse = () => {
         matchedWithId: id,
         timestamp: Date.now(),
         read: false,
-        status: 'pending' as const
+        status: 'confirmed' as const // Change from 'pending' to 'confirmed' to make matches appear immediately
       };
       
-      await createMatch(match);
+      const createdMatch = await createMatch(match);
       
-      toast({
-        title: "Matchning!",
-        description: "Du gillade denna golfaren",
-        variant: "default",
-      });
+      if (createdMatch) {
+        // Invalidate matches query to refresh the matches list
+        queryClient.invalidateQueries({queryKey: ['matches', user.id]});
+        
+        toast({
+          title: "Matchning!",
+          description: "Du gillade denna golfaren, ni är nu matchade!",
+          variant: "default",
+        });
+      } else {
+        throw new Error("Kunde inte skapa matchning");
+      }
     } catch (error) {
       console.error("Error creating match:", error);
       toast({
