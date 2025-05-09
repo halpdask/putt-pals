@@ -11,6 +11,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase configuration is missing');
 }
 
+// Create a custom fetch function with timeout
+const fetchWithTimeout = (url: string, options: RequestInit & { headers: HeadersInit }) => {
+  return fetch(url, {
+    ...options,
+    headers: { ...options.headers },
+    // Increase timeout to allow for slower connections
+    signal: AbortSignal.timeout(30000), // 30 second timeout
+  });
+};
+
 // Create a single supabase client for interacting with your database
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -31,15 +41,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       eventsPerSecond: 10
     }
   },
-  // Add request retries to handle temporary network issues
-  fetch: (url, options) => {
-    return fetch(url, {
-      ...options,
-      headers: { ...options?.headers },
-      // Increase timeout to allow for slower connections
-      signal: AbortSignal.timeout(30000), // 30 second timeout
-    });
-  }
 });
 
 // Wrap Supabase auth events in try/catch to prevent uncaught errors
