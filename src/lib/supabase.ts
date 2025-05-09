@@ -316,7 +316,44 @@ export const getGolfBag = async (userId: string): Promise<GolfBag | null> => {
   try {
     console.log('Fetching golf bag for user:', userId);
     
-    // First check if the user has a bag
+    // First check if the user profile exists
+    const userProfile = await getProfile(userId);
+    
+    // If profile doesn't exist, create it
+    if (!userProfile) {
+      console.log('User profile not found, creating profile before creating golf bag:', userId);
+      const session = await supabase.auth.getSession();
+      const currentUserId = session.data.session?.user?.id;
+      
+      if (!currentUserId || currentUserId !== userId) {
+        console.error('Authentication mismatch. Cannot create a profile for another user:', { currentUserId, requestedUserId: userId });
+        return null;
+      }
+      
+      // Create a basic profile for the user
+      const defaultProfile: Partial<GolferProfile> = {
+        id: userId,
+        name: 'New Golfer',
+        age: 30,
+        gender: 'Man',
+        handicap: 18,
+        homeCourse: '',
+        location: '',
+        bio: '',
+        profileImage: '',
+        roundTypes: ['Sällskapsrunda'],
+        availability: ['Helger'],
+      };
+      
+      const createdProfile = await createProfile(defaultProfile);
+      if (!createdProfile) {
+        console.error('Failed to create profile for user:', userId);
+        return null;
+      }
+      console.log('Successfully created profile for user:', userId);
+    }
+    
+    // Now check if the user has a bag
     const { data: bagData, error: bagError } = await supabase
       .from('golf_bags')
       .select('*')
