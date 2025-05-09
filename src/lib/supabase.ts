@@ -5,7 +5,6 @@ import { GolferProfile, GolfBag, GolfClub, Match, ChatMessage } from '../types/g
 // When using Lovable's Supabase integration, these variables are automatically injected
 const supabaseUrl = "https://fsazjbyvxrqpwjajfmkz.supabase.co";
 // import.meta.env.VITE_SUPABASE_URL;
-// import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzYXpqYnl2eHJxcHdqYWpmbWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY3MDE3NjIsImV4cCI6MjA2MjI3Nzc2Mn0.4TFjCzQSUDzclrP90z8B9x33jmrtkWsVdz2xCbBahvY";
 
 // Validate that we have the required configuration values
@@ -43,36 +42,118 @@ export const getProfile = async (userId: string): Promise<GolferProfile | null> 
     return null;
   }
   if (!data) return null;
-  return data as unknown as GolferProfile;
+  
+  // Map database fields to our GolferProfile type
+  const profile: GolferProfile = {
+    id: data.id,
+    name: data.name || '',
+    age: data.age || 30,
+    gender: data.gender || 'Man',
+    handicap: data.handicap || 18,
+    homeCourse: data.home_course || '',
+    location: data.location || '',
+    bio: data.bio || '',
+    profileImage: data.profile_image || '',
+    roundTypes: data.round_types || ['Sällskapsrunda'],
+    availability: data.availability || ['Helger'],
+  };
+  
+  return profile;
 };
 
-export const createProfile = async (profile: GolferProfile): Promise<GolferProfile | null> => {
-  const { data, error } = await supabase
-    .from('profiles')
-    .insert(profile)
-    .select()
-    .single();
-  
-  if (error) {
-    console.error('Error creating profile:', error);
+export const createProfile = async (profile: any): Promise<GolferProfile | null> => {
+  try {
+    // Convert our GolferProfile to match database schema
+    const dbProfile = {
+      id: profile.id,
+      name: profile.name,
+      age: profile.age,
+      gender: profile.gender,
+      handicap: profile.handicap,
+      location: profile.location,
+      bio: profile.bio,
+      profile_image: profile.profileImage || profile.profile_image || '',
+      round_types: profile.roundTypes || profile.round_types || ['Sällskapsrunda'],
+      availability: profile.availability || ['Helger'],
+    };
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert(dbProfile)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating profile:', error);
+      return null;
+    }
+    
+    // Map back to our app's GolferProfile type
+    return {
+      id: data.id,
+      name: data.name,
+      age: data.age,
+      gender: data.gender,
+      handicap: data.handicap,
+      homeCourse: data.home_course || '',
+      location: data.location || '',
+      bio: data.bio || '',
+      profileImage: data.profile_image || '',
+      roundTypes: data.round_types || ['Sällskapsrunda'],
+      availability: data.availability || ['Helger'],
+    } as GolferProfile;
+  } catch (error) {
+    console.error('Error in createProfile:', error);
     return null;
   }
-  return data as unknown as GolferProfile;
 };
 
 export const updateProfile = async (profile: GolferProfile): Promise<GolferProfile | null> => {
-  const { data, error } = await supabase
-    .from('profiles')
-    .update(profile)
-    .eq('id', profile.id)
-    .select()
-    .single();
-  
-  if (error) {
-    console.error('Error updating profile:', error);
+  try {
+    // Convert our GolferProfile to match database schema
+    const dbProfile = {
+      name: profile.name,
+      age: profile.age,
+      gender: profile.gender,
+      handicap: profile.handicap,
+      home_course: profile.homeCourse || '',
+      location: profile.location || '',
+      bio: profile.bio || '',
+      profile_image: profile.profileImage || '',
+      round_types: profile.roundTypes || ['Sällskapsrunda'],
+      availability: profile.availability || ['Helger'],
+    };
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(dbProfile)
+      .eq('id', profile.id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating profile:', error);
+      return null;
+    }
+    
+    // Map back to our app's GolferProfile type
+    return {
+      id: data.id,
+      name: data.name,
+      age: data.age,
+      gender: data.gender,
+      handicap: data.handicap,
+      homeCourse: data.home_course || '',
+      location: data.location || '',
+      bio: data.bio || '',
+      profileImage: data.profile_image || '',
+      roundTypes: data.round_types || ['Sällskapsrunda'],
+      availability: data.availability || ['Helger'],
+    } as GolferProfile;
+  } catch (error) {
+    console.error('Error in updateProfile:', error);
     return null;
   }
-  return data as unknown as GolferProfile;
 };
 
 // Golf Bag functions

@@ -35,11 +35,22 @@ const Signup = () => {
       const { error } = await signUp(email, password);
       
       if (error) {
-        toast({
-          title: "Registreringen misslyckades",
-          description: error.message,
-          variant: "destructive",
-        });
+        console.error("Signup error details:", error);
+        
+        if (error.message?.includes('User already registered')) {
+          toast({
+            title: "E-postadressen används redan",
+            description: "Vänligen använd en annan e-postadress eller logga in istället.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Registreringen misslyckades",
+            description: error.message || "Ett fel inträffade vid registreringen.",
+            variant: "destructive",
+          });
+        }
+        setLoading(false);
         return;
       }
       
@@ -48,10 +59,11 @@ const Signup = () => {
         description: "Kontrollera din e-post för att bekräfta ditt konto.",
       });
       navigate("/login");
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Unexpected signup error:", error);
       toast({
         title: "Ett fel inträffade",
-        description: "Kunde inte skapa konto. Försök igen senare.",
+        description: error?.message || "Kunde inte skapa konto. Försök igen senare.",
         variant: "destructive",
       });
     } finally {

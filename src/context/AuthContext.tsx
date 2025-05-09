@@ -106,25 +106,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Create a basic profile for the user if signup was successful
       if (!error && data?.user) {
-        const defaultProfile: GolferProfile = {
+        // Adjust the profile structure to match your actual database schema
+        const defaultProfile = {
           id: data.user.id,
           name: email.split('@')[0] || 'Golfare',
           age: 30,
           gender: 'Man',
           handicap: 18,
-          homeCourse: '',
+          // Remove or make optional any fields that don't exist in your database
           location: '',
           bio: '',
-          profileImage: '',
-          roundTypes: ['Sällskapsrunda'],
+          profile_image: '', // Changed from profileImage to match database column
+          round_types: ['Sällskapsrunda'], // Changed from roundTypes to match database column
           availability: ['Helger'],
         };
         
-        await createProfile(defaultProfile);
+        await createProfile(defaultProfile as any);
       }
       
       return { error };
     } catch (error) {
+      console.error("Signup error:", error);
       return { error: error as Error };
     }
   }
