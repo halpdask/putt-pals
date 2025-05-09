@@ -1,4 +1,3 @@
-
 export type RoundType = 'Sällskapsrunda' | 'Träningsrunda' | 'Matchspel' | 'Foursome' | 'Scramble';
 
 export interface Location {
@@ -26,11 +25,11 @@ export interface GolferProfile {
   availability: string[];
   // Add golf bag related fields
   bag?: GolfBag;
-  // Add fields for search and filtering
-  search_radius_km?: number;
-  max_handicap_difference?: number;
-  min_age_preference?: number;
-  max_age_preference?: number;
+  // Add fields for search and filtering - making these required
+  search_radius_km: number;
+  max_handicap_difference: number;
+  min_age_preference: number;
+  max_age_preference: number;
 }
 
 export type ClubType = 

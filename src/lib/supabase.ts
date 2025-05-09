@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { GolferProfile, GolfBag, GolfClub, Match, ChatMessage } from '../types/golfer';
 
@@ -196,6 +195,10 @@ export const getProfile = async (userId: string): Promise<GolferProfile | null> 
       profileImage: data.profile_image || '',
       roundTypes: data.round_types || ['Sällskapsrunda'],
       availability: data.availability || ['Helger'],
+      search_radius_km: data.search_radius_km || 50,
+      max_handicap_difference: data.max_handicap_difference || 10,
+      min_age_preference: data.min_age_preference || 18,
+      max_age_preference: data.max_age_preference || 100,
     };
     
     console.log('Successfully retrieved profile for user:', userId);
@@ -208,7 +211,7 @@ export const getProfile = async (userId: string): Promise<GolferProfile | null> 
 
 export const createProfile = async (profile: Partial<GolferProfile>): Promise<GolferProfile | null> => {
   try {
-    // Convert our GolferProfile to match database schema
+    // Convert our GolferProfile to match database schema and ensure required fields have default values
     const dbProfile = {
       id: profile.id,
       name: profile.name,
@@ -221,6 +224,10 @@ export const createProfile = async (profile: Partial<GolferProfile>): Promise<Go
       profile_image: profile.profileImage || '',
       round_types: profile.roundTypes || ['Sällskapsrunda'],
       availability: profile.availability || ['Helger'],
+      search_radius_km: profile.search_radius_km || 50, // Default 50 km radius
+      max_handicap_difference: profile.max_handicap_difference || 10, // Default 10 handicap difference
+      min_age_preference: profile.min_age_preference || 18, // Default minimum age of 18
+      max_age_preference: profile.max_age_preference || 100, // Default maximum age of 100
     };
     
     console.log('Creating profile with data:', dbProfile);
@@ -251,6 +258,10 @@ export const createProfile = async (profile: Partial<GolferProfile>): Promise<Go
       profileImage: data.profile_image || '',
       roundTypes: data.round_types || ['Sällskapsrunda'],
       availability: data.availability || ['Helger'],
+      search_radius_km: data.search_radius_km || 50,
+      max_handicap_difference: data.max_handicap_difference || 10,
+      min_age_preference: data.min_age_preference || 18,
+      max_age_preference: data.max_age_preference || 100,
     } as GolferProfile;
   } catch (error) {
     console.error('Error in createProfile:', error);
@@ -330,7 +341,7 @@ export const getGolfBag = async (userId: string): Promise<GolfBag | null> => {
         return null;
       }
       
-      // Create a basic profile for the user
+      // Create a basic profile for the user with required fields
       const defaultProfile: Partial<GolferProfile> = {
         id: userId,
         name: 'New Golfer',
@@ -343,6 +354,10 @@ export const getGolfBag = async (userId: string): Promise<GolfBag | null> => {
         profileImage: '',
         roundTypes: ['Sällskapsrunda'],
         availability: ['Helger'],
+        search_radius_km: 50,
+        max_handicap_difference: 10,
+        min_age_preference: 18,
+        max_age_preference: 100,
       };
       
       const createdProfile = await createProfile(defaultProfile);
