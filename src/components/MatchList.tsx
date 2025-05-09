@@ -1,27 +1,52 @@
 
 import { useEffect, useState } from "react";
 import { Match, GolferProfile } from "../types/golfer";
-import { mockGolfers } from "../data/mockGolfers";
 import { formatDistanceToNow } from "date-fns";
 import { sv } from "date-fns/locale";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
+import { getMatches } from "../lib/supabase";
+import { useAuth } from "../context/AuthContext";
+import ChatDialog from "./ChatDialog";
+import { mockGolfers } from "../data/mockGolfers"; // Temporary until we have real profiles
 
 interface MatchListProps {
-  matches: Match[];
+  matches?: Match[];
 }
 
-const MatchList = ({ matches }: MatchListProps) => {
+const MatchList = ({ matches: initialMatches }: MatchListProps) => {
+  const { user } = useAuth();
   const [matchedProfiles, setMatchedProfiles] = useState<GolferProfile[]>([]);
+  const [selectedMatch, setSelectedMatch] = useState<{match: Match, profile: GolferProfile} | null>(null);
+  
+  const { data: fetchedMatches, isLoading } = useQuery({
+    queryKey: ['matches', user?.id],
+    queryFn: () => user ? getMatches(user.id) : [],
+    enabled: !!user,
+    initialData: initialMatches || []
+  });
+
+  const matches = fetchedMatches || initialMatches || [];
 
   useEffect(() => {
     // In a real app, you would fetch these profiles from an API
+    // For now, use the mock data
     const profiles = matches.map(match => {
-      return mockGolfers.find(golfer => golfer.id === match.matchedWithId);
+      const matchedId = match.golferId === user?.id ? match.matchedWithId : match.golferId;
+      return mockGolfers.find(golfer => golfer.id === matchedId);
     }).filter((profile): profile is GolferProfile => profile !== undefined);
     
     setMatchedProfiles(profiles);
-  }, [matches]);
+  }, [matches, user?.id]);
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-gray-500">Laddar matchningar...</p>
+      </div>
+    );
+  }
 
   if (matches.length === 0) {
     return (
@@ -31,16 +56,28 @@ const MatchList = ({ matches }: MatchListProps) => {
     );
   }
 
+  const handleOpenChat = (match: Match, profile: GolferProfile) => {
+    setSelectedMatch({ match, profile });
+  };
+
+  const handleCloseChat = () => {
+    setSelectedMatch(null);
+  };
+
   return (
     <div className="space-y-4">
       {matches.map((match, index) => {
-        const profile = matchedProfiles.find(p => p.id === match.matchedWithId);
+        const profile = matchedProfiles.find(p => 
+          p.id === (match.golferId === user?.id ? match.matchedWithId : match.golferId)
+        );
+        
         if (!profile) return null;
         
         return (
           <div 
             key={match.id} 
-            className={`p-4 border rounded-lg flex items-center space-x-4 ${!match.read ? 'bg-green-50 border-golf-green-light' : 'bg-white'}`}
+            className={`p-4 border rounded-lg flex items-center space-x-4 ${!match.read ? 'bg-green-50 border-golf-green-light' : 'bg-white'} cursor-pointer`}
+            onClick={() => handleOpenChat(match, profile)}
           >
             <Avatar className="h-14 w-14">
               <AvatarImage src={profile.profileImage} alt={profile.name} />
@@ -67,6 +104,15 @@ const MatchList = ({ matches }: MatchListProps) => {
           </div>
         );
       })}
+
+      {selectedMatch && (
+        <ChatDialog
+          isOpen={!!selectedMatch}
+          onClose={handleCloseChat}
+          matchId={selectedMatch.match.id}
+          matchedProfile={selectedMatch.profile}
+        />
+      )}
     </div>
   );
 };

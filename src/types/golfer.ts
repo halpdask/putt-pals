@@ -1,6 +1,13 @@
 
 export type RoundType = 'Sällskapsrunda' | 'Träningsrunda' | 'Matchspel' | 'Foursome' | 'Scramble';
 
+export interface Location {
+  latitude: number;
+  longitude: number;
+  city: string;
+  country: string;
+}
+
 export interface GolferProfile {
   id: string;
   name: string;
@@ -9,6 +16,10 @@ export interface GolferProfile {
   handicap: number;
   homeCourse: string;
   location: string;
+  coordinates?: {
+    latitude: number;
+    longitude: number;
+  };
   bio: string;
   profileImage: string;
   roundTypes: RoundType[];
@@ -37,6 +48,7 @@ export type ClubType =
 export interface GolfBag {
   id: string;
   name: string;
+  user_id?: string;
   clubs: GolfClub[];
 }
 
