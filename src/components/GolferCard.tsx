@@ -24,7 +24,7 @@ const GolferCard = ({ golfer, onLike, onDislike, disabled = false }: GolferCardP
           className="w-full h-2/3 object-cover"
         />
         
-        <div className="absolute bottom-0 left-0 right-0 bg-white p-4 h-1/3">
+        <div className="absolute bottom-0 left-0 right-0 bg-white p-4 h-1/3 flex flex-col">
           <div className="flex justify-between items-start">
             <div>
               <h2 className="text-2xl font-bold">{golfer.name}, {golfer.age}</h2>
@@ -75,7 +75,7 @@ const GolferCard = ({ golfer, onLike, onDislike, disabled = false }: GolferCardP
             </Dialog>
           </div>
           
-          <div className="mt-2">
+          <div className="mt-2 flex-grow">
             <div className="flex items-center space-x-2">
               <span className="font-semibold">Hcp:</span>
               <span>{golfer.handicap}</span>
@@ -92,24 +92,25 @@ const GolferCard = ({ golfer, onLike, onDislike, disabled = false }: GolferCardP
               )}
             </div>
           </div>
-        </div>
-        
-        <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-12">
-          <button 
-            className="swipe-button bg-red-50 text-red-500"
-            onClick={() => onDislike(golfer.id)}
-            disabled={disabled}
-          >
-            <X size={28} />
-          </button>
           
-          <button 
-            className="swipe-button bg-green-50 text-golf-green-dark"
-            onClick={() => onLike(golfer.id)}
-            disabled={disabled}
-          >
-            <Heart size={28} />
-          </button>
+          {/* Action buttons positioned at the bottom with more spacing */}
+          <div className="mt-4 flex justify-center gap-16 pt-6">
+            <button 
+              className="swipe-button bg-red-50 text-red-500"
+              onClick={() => onDislike(golfer.id)}
+              disabled={disabled}
+            >
+              <X size={28} />
+            </button>
+            
+            <button 
+              className="swipe-button bg-green-50 text-golf-green-dark"
+              onClick={() => onLike(golfer.id)}
+              disabled={disabled}
+            >
+              <Heart size={28} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
