@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Heart, X, Info } from "lucide-react";
 import { GolferProfile } from "../types/golfer";
@@ -209,15 +208,6 @@ const GolferCard = ({ golfer, onLike, onDislike, disabled = false }: GolferCardP
             </div>
           </div>
         </Card>
-        
-        {/* Swipe instructions - shown only initially */}
-        <div className="swipe-hint absolute top-1/2 left-0 right-0 transform -translate-y-1/2 text-center text-white text-xl opacity-80 pointer-events-none">
-          <p className="bg-black bg-opacity-40 p-2 rounded mx-auto inline-block shadow-lg">
-            Svep <span className="text-red-300">vänster</span> för att neka 
-            <br />
-            Svep <span className="text-green-300">höger</span> för att gilla
-          </p>
-        </div>
       </div>
     </div>
   );

@@ -493,13 +493,6 @@ const Browse = () => {
             </Button>
           </Card>
         )}
-        
-        {/* Optional swipe instructions for first-time users */}
-        {currentGolfer && (
-          <div className="text-center text-sm text-gray-500 mt-4">
-            <p>Svep åt höger för att gilla, åt vänster för att neka</p>
-          </div>
-        )}
       </div>
       
       <Navbar />
