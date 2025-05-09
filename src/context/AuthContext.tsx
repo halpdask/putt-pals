@@ -1,8 +1,7 @@
-
 import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase, getProfile, createProfile } from '../lib/supabase';
-import { GolferProfile } from '../types/golfer';
+import { GolferProfile, RoundType } from '../types/golfer';
 
 type AuthContextType = {
   session: Session | null;
@@ -119,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!error && data?.user) {
         try {
           // Adjust the profile structure to match your actual database schema
-          const defaultProfile = {
+          const defaultProfile: Partial<GolferProfile> = {
             id: data.user.id,
             name: email.split('@')[0] || 'Golfare',
             age: 30,
@@ -128,8 +127,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             homeCourse: '',
             location: '',
             bio: '',
-            profileImage: '', // Changed from profile_image to match GolferProfile type
-            roundTypes: ['Sällskapsrunda'] as const,
+            profileImage: '',
+            // Fix: explicitly define as mutable array of RoundType
+            roundTypes: ['Sällskapsrunda'] as RoundType[],
             availability: ['Helger'],
           };
           
