@@ -24,11 +24,13 @@ const Login = () => {
       const { error } = await signIn(email, password);
       
       if (error) {
+        console.log("Login error:", error);
         toast({
           title: "Inloggningen misslyckades",
-          description: error.message,
+          description: error.message || "Kontrollera dina inloggningsuppgifter och försök igen.",
           variant: "destructive",
         });
+        setLoading(false);
         return;
       }
       
@@ -37,7 +39,8 @@ const Login = () => {
         description: "Du är nu inloggad.",
       });
       navigate("/browse");
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Unexpected login error:", error);
       toast({
         title: "Ett fel inträffade",
         description: "Kunde inte logga in. Försök igen senare.",
@@ -76,6 +79,7 @@ const Login = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   className="mt-1"
                   placeholder="din@email.se"
+                  autoComplete="email"
                 />
               </div>
 
@@ -91,6 +95,7 @@ const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="mt-1"
                   placeholder="••••••••"
+                  autoComplete="current-password"
                 />
               </div>
             </div>

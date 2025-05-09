@@ -30,9 +30,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchProfile = async (userId: string) => {
     if (!userId) return null;
     
-    const userProfile = await getProfile(userId);
-    setProfile(userProfile);
-    return userProfile;
+    try {
+      const userProfile = await getProfile(userId);
+      console.log("Fetched profile:", userProfile);
+      setProfile(userProfile);
+      return userProfile;
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      return null;
+    }
   };
 
   const refreshProfile = async () => {
@@ -47,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
-          console.error(error);
+          console.error("Auth session error:", error);
           setLoading(false);
           return;
         }
@@ -67,7 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
+        console.log("Auth state changed:", event, session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -93,8 +100,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signIn(email: string, password: string) {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        console.error("Sign in error:", error);
+      }
       return { error };
     } catch (error) {
+      console.error("Unexpected sign in error:", error);
       return { error: error as Error };
     }
   }
@@ -106,27 +117,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Create a basic profile for the user if signup was successful
       if (!error && data?.user) {
-        // Adjust the profile structure to match your actual database schema
-        const defaultProfile = {
-          id: data.user.id,
-          name: email.split('@')[0] || 'Golfare',
-          age: 30,
-          gender: 'Man',
-          handicap: 18,
-          // Remove or make optional any fields that don't exist in your database
-          location: '',
-          bio: '',
-          profile_image: '', // Changed from profileImage to match database column
-          round_types: ['Sällskapsrunda'], // Changed from roundTypes to match database column
-          availability: ['Helger'],
-        };
-        
-        await createProfile(defaultProfile as any);
+        try {
+          // Adjust the profile structure to match your actual database schema
+          const defaultProfile = {
+            id: data.user.id,
+            name: email.split('@')[0] || 'Golfare',
+            age: 30,
+            gender: 'Man' as const,
+            handicap: 18,
+            homeCourse: '',
+            location: '',
+            bio: '',
+            profileImage: '', // Changed from profile_image to match GolferProfile type
+            roundTypes: ['Sällskapsrunda'] as const,
+            availability: ['Helger'],
+          };
+          
+          console.log("Creating profile with:", defaultProfile);
+          const createdProfile = await createProfile(defaultProfile);
+          console.log("Created profile:", createdProfile);
+          
+          if (!createdProfile) {
+            console.error("Failed to create profile during signup");
+          }
+        } catch (profileError) {
+          console.error("Profile creation error during signup:", profileError);
+        }
+      } else if (error) {
+        console.error("Signup error:", error);
       }
       
       return { error };
     } catch (error) {
-      console.error("Signup error:", error);
+      console.error("Unexpected signup error:", error);
       return { error: error as Error };
     }
   }

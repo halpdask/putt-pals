@@ -56,7 +56,7 @@ const Signup = () => {
       
       toast({
         title: "Konto skapat!",
-        description: "Kontrollera din e-post för att bekräfta ditt konto.",
+        description: "Du kan nu logga in med dina uppgifter.",
       });
       navigate("/login");
     } catch (error: any) {
@@ -99,6 +99,7 @@ const Signup = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   className="mt-1"
                   placeholder="din@email.se"
+                  autoComplete="email"
                 />
               </div>
 
@@ -115,6 +116,7 @@ const Signup = () => {
                   className="mt-1"
                   placeholder="••••••••"
                   minLength={6}
+                  autoComplete="new-password"
                 />
               </div>
 
@@ -131,6 +133,7 @@ const Signup = () => {
                   className="mt-1"
                   placeholder="••••••••"
                   minLength={6}
+                  autoComplete="new-password"
                 />
               </div>
             </div>
