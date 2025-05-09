@@ -7,8 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/components/ui/use-toast";
 import { MessageSquare, Send } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { GolferProfile } from "../types/golfer";
-import { ChatMessage, getChatMessages, sendChatMessage } from "../lib/supabase";
+import { GolferProfile, ChatMessage } from "../types/golfer";
+import { getChatMessages, sendChatMessage } from "../lib/supabase";
 import { formatDistanceToNow } from "date-fns";
 import { sv } from "date-fns/locale";
 
