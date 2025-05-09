@@ -26,15 +26,11 @@ export interface GolferProfile {
   availability: string[];
   // Add golf bag related fields
   bag?: GolfBag;
-}
-
-export interface GolfClub {
-  id: string;
-  brand: string;
-  model: string;
-  type: ClubType;
-  loft?: number;
-  notes?: string;
+  // Add fields for search and filtering
+  search_radius_km?: number;
+  max_handicap_difference?: number;
+  min_age_preference?: number;
+  max_age_preference?: number;
 }
 
 export type ClubType = 
@@ -44,6 +40,17 @@ export type ClubType =
   | 'Iron'
   | 'Wedge'
   | 'Putter';
+
+export interface GolfClub {
+  id: string;
+  brand: string;
+  model: string;
+  type: ClubType;
+  loft?: number;
+  notes?: string;
+  // Foreign key for bag
+  bag_id?: string;
+}
 
 export interface GolfBag {
   id: string;
@@ -58,5 +65,16 @@ export interface Match {
   matchedWithId: string;
   timestamp: number;
   lastMessage?: string;
+  read: boolean;
+  // Add status field for pending/confirmed matches
+  status?: 'pending' | 'confirmed' | 'rejected';
+}
+
+export interface ChatMessage {
+  id: string;
+  match_id: string;
+  sender_id: string;
+  content: string;
+  timestamp: number;
   read: boolean;
 }

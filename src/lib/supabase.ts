@@ -1,23 +1,19 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { GolferProfile, GolfBag, GolfClub, Match } from '../types/golfer';
 
-// Get the Supabase URL and public anon key from environment variables
+// We need to ensure proper environment variables are available
+// When using Lovable's Supabase integration, these variables are automatically injected
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Check if the required values are available
+// Validate that we have the required configuration values
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Supabase URL or Anon Key is missing. Please check your Supabase integration in Lovable.');
-  // We don't throw an error here, as it would break the app on initial load
-  // Instead, we'll use placeholder values for development and show a warning
+  throw new Error('Supabase configuration is missing. Please ensure the Lovable Supabase integration is properly configured.');
 }
 
 // Create a single supabase client for interacting with your database
-export const supabase = createClient(
-  supabaseUrl || "",
-  supabaseAnonKey || ""
-);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Auth functions
 export const signIn = async (email: string, password: string) => {
