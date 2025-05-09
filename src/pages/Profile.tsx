@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Flag, Settings, LogOut } from "lucide-react";
 import Navbar from "../components/Navbar";
 import ProfileForm from "../components/ProfileForm";
@@ -42,15 +42,22 @@ const Profile = () => {
 
   const handleSaveProfile = async (updatedProfile: GolferProfile) => {
     try {
+      console.log("Saving profile updates:", updatedProfile);
       // Make sure the ID is set correctly
       if (user && profile) {
         updatedProfile.id = user.id;
-        await updateProfile(updatedProfile);
-        toast({
-          title: "Profil uppdaterad",
-          description: "Dina profiländringar har sparats",
-        });
-        refetch(); // Refresh profile data
+        const result = await updateProfile(updatedProfile);
+        
+        if (result) {
+          toast({
+            title: "Profil uppdaterad",
+            description: "Dina profiländringar har sparats",
+          });
+          console.log("Profile updated successfully");
+          refetch(); // Refresh profile data
+        } else {
+          throw new Error("Failed to update profile");
+        }
       }
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -60,6 +67,31 @@ const Profile = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handlePreferencesSave = async () => {
+    if (!profile) return;
+    
+    try {
+      await updateProfile(profile);
+      toast({
+        title: "Preferenser sparade",
+        description: "Dina preferenser har uppdaterats",
+      });
+    } catch (error) {
+      console.error("Error saving preferences:", error);
+      toast({
+        title: "Ett fel inträffade",
+        description: "Kunde inte spara preferenser",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePreferencesChange = (field: string, value: any) => {
+    if (!profile) return;
+    
+    refetch();
   };
 
   if (isLoading) {
@@ -113,12 +145,12 @@ const Profile = () => {
             <Avatar className="h-20 w-20 border-2 border-golf-green-light">
               <AvatarImage src={profile.profileImage} alt={profile.name} />
               <AvatarFallback className="bg-golf-green-dark text-white">
-                {profile.name[0]}{profile.name.split(' ')[1]?.[0]}
+                {profile.name ? (profile.name[0] + (profile.name.split(' ')[1]?.[0] || '')) : 'GP'}
               </AvatarFallback>
             </Avatar>
             
             <div>
-              <h2 className="text-2xl font-bold">{profile.name}</h2>
+              <h2 className="text-2xl font-bold">{profile.name || "Namn saknas"}</h2>
               <div className="flex items-center mt-1 text-gray-600">
                 <Flag className="w-4 h-4 mr-1" />
                 <span>Hcp {profile.handicap}</span>
@@ -156,7 +188,8 @@ const Profile = () => {
                     min="5" 
                     max="200" 
                     step="5"
-                    defaultValue={profile.search_radius_km}
+                    value={profile.search_radius_km}
+                    onChange={(e) => handlePreferencesChange('search_radius_km', parseInt(e.target.value))}
                     className="w-full"
                   />
                   <div className="flex justify-between mt-1">
@@ -172,7 +205,8 @@ const Profile = () => {
                     min="1" 
                     max="54" 
                     step="1"
-                    defaultValue={profile.max_handicap_difference}
+                    value={profile.max_handicap_difference}
+                    onChange={(e) => handlePreferencesChange('max_handicap_difference', parseInt(e.target.value))}
                     className="w-full"
                   />
                   <div className="flex justify-between mt-1">
@@ -188,7 +222,8 @@ const Profile = () => {
                       type="number" 
                       min="18" 
                       max="100"
-                      defaultValue={profile.min_age_preference}
+                      value={profile.min_age_preference}
+                      onChange={(e) => handlePreferencesChange('min_age_preference', parseInt(e.target.value))}
                       className="w-20 border p-2 rounded"
                     />
                     <span>till</span>
@@ -196,7 +231,8 @@ const Profile = () => {
                       type="number" 
                       min="18" 
                       max="100"
-                      defaultValue={profile.max_age_preference}
+                      value={profile.max_age_preference}
+                      onChange={(e) => handlePreferencesChange('max_age_preference', parseInt(e.target.value))}
                       className="w-20 border p-2 rounded"
                     />
                     <span>år</span>
@@ -205,12 +241,7 @@ const Profile = () => {
                 
                 <Button 
                   className="w-full bg-golf-green-dark hover:bg-golf-green-light mt-4"
-                  onClick={() => {
-                    toast({
-                      title: "Kommer snart",
-                      description: "Denna funktion är under utveckling",
-                    })
-                  }}
+                  onClick={handlePreferencesSave}
                 >
                   Spara preferenser
                 </Button>

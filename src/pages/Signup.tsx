@@ -68,7 +68,9 @@ const Signup = () => {
         title: "Konto skapat!",
         description: "Nu kan du slutföra din profil.",
       });
-      // Redirect to complete profile instead of login
+      
+      // Explicitly redirect to complete-profile route after successful signup
+      console.log("Redirecting to complete-profile after signup");
       navigate("/complete-profile");
     } catch (error: any) {
       console.error("Unexpected signup error:", error);

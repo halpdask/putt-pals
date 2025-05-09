@@ -39,18 +39,22 @@ const CompleteProfile = () => {
   useEffect(() => {
     const fetchOrCreateProfile = async () => {
       if (!user) {
+        console.log("No user found, redirecting to login");
         navigate("/login");
         return;
       }
 
       try {
+        console.log("Checking if user has profile:", user.id);
         // Check if user already has a profile
         const existingProfile = await getProfile(user.id);
         
         if (existingProfile) {
+          console.log("User already has profile, redirecting to profile page");
           // If user already has a profile, redirect to profile page
           navigate("/profile");
         } else {
+          console.log("Creating default profile state for new user");
           // Create a new default profile state (not saved to DB yet)
           setProfile(createDefaultProfile());
         }
@@ -74,6 +78,7 @@ const CompleteProfile = () => {
     
     setLoading(true);
     try {
+      console.log("Saving profile for user:", user.id);
       // Make sure ID is set correctly
       updatedProfile.id = user.id;
       
@@ -85,6 +90,7 @@ const CompleteProfile = () => {
           title: "Profil sparad",
           description: "Din profil har skapats framgångsrikt",
         });
+        console.log("Profile saved successfully, redirecting to profile page");
         navigate("/profile");
       } else {
         throw new Error("Kunde inte spara profil");
@@ -129,7 +135,7 @@ const CompleteProfile = () => {
           <div className="mt-6 text-center">
             <Button 
               variant="outline" 
-              onClick={() => navigate("/profile")}
+              onClick={() => navigate("/browse")}
               className="text-gray-500"
             >
               Hoppa över för nu
