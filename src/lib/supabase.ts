@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { GolferProfile, GolfBag, GolfClub, Match, ChatMessage } from '../types/golfer';
 
@@ -13,24 +12,108 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Create a single supabase client for interacting with your database
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: localStorage
+  },
+  global: {
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
+  }
+});
+
+// Log connection status for diagnostics
+supabase.auth.onAuthStateChange((event, session) => {
+  console.log(`Supabase auth event: ${event}`, session?.user?.id || 'No user');
+});
+
+// Attempt to reconnect on page load
+const attemptReconnection = async () => {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      console.error('Error reconnecting to Supabase:', error);
+    } else {
+      console.log('Reconnected to Supabase successfully:', data.session?.user?.id || 'No active session');
+    }
+  } catch (err) {
+    console.error('Failed to reconnect to Supabase:', err);
+  }
+};
+
+// Try to reconnect when this module loads
+attemptReconnection();
 
 // Auth functions
 export const signIn = async (email: string, password: string) => {
-  return await supabase.auth.signInWithPassword({ email, password });
+  try {
+    const result = await supabase.auth.signInWithPassword({ email, password });
+    
+    // Log additional details for debugging
+    if (result.error) {
+      console.error('Sign in error details:', result.error);
+    } else {
+      console.log('Sign in successful for:', result.data.user?.id);
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Unexpected error during sign in:', error);
+    return { data: { user: null, session: null }, error };
+  }
 };
 
 export const signUp = async (email: string, password: string) => {
-  return await supabase.auth.signUp({ email, password });
+  try {
+    const result = await supabase.auth.signUp({ email, password });
+    
+    if (result.error) {
+      console.error('Sign up error details:', result.error);
+    } else {
+      console.log('Sign up successful for:', result.data.user?.id);
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Unexpected error during sign up:', error);
+    return { data: { user: null, session: null }, error };
+  }
 };
 
 export const signOut = async () => {
-  return await supabase.auth.signOut();
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Sign out error:', error);
+    } else {
+      console.log('Sign out successful');
+    }
+    return { error };
+  } catch (error) {
+    console.error('Unexpected error during sign out:', error);
+    return { error };
+  }
 };
 
 // Profile functions
 export const getProfile = async (userId: string): Promise<GolferProfile | null> => {
   try {
+    console.log('Fetching profile for user:', userId);
+    
+    if (!userId || typeof userId !== 'string') {
+      console.error('Invalid userId provided to getProfile:', userId);
+      return null;
+    }
+    
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -41,7 +124,10 @@ export const getProfile = async (userId: string): Promise<GolferProfile | null> 
       console.error('Error fetching profile:', error);
       return null;
     }
-    if (!data) return null;
+    if (!data) {
+      console.log('No profile found for user:', userId);
+      return null;
+    }
     
     // Map database fields to our GolferProfile type
     const profile: GolferProfile = {
@@ -58,9 +144,10 @@ export const getProfile = async (userId: string): Promise<GolferProfile | null> 
       availability: data.availability || ['Helger'],
     };
     
+    console.log('Successfully retrieved profile for user:', userId);
     return profile;
   } catch (error) {
-    console.error('Error in getProfile:', error);
+    console.error('Unexpected error in getProfile:', error);
     return null;
   }
 };
@@ -167,78 +254,107 @@ export const updateProfile = async (profile: GolferProfile): Promise<GolferProfi
 
 // Golf Bag functions
 export const getGolfBag = async (userId: string): Promise<GolfBag | null> => {
-  // First check if the user has a bag
-  const { data: bagData, error: bagError } = await supabase
-    .from('golf_bags')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
-  
-  if (bagError && bagError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-    console.error('Error fetching golf bag:', bagError);
+  if (!userId || typeof userId !== 'string') {
+    console.error('Invalid userId provided to getGolfBag:', userId);
     return null;
   }
   
-  // If no bag exists, create one
-  if (!bagData) {
-    const { data: newBag, error: createError } = await supabase
+  try {
+    console.log('Fetching golf bag for user:', userId);
+    
+    // First check if the user has a bag
+    const { data: bagData, error: bagError } = await supabase
       .from('golf_bags')
-      .insert({
-        user_id: userId,
-        name: 'Min Golfbag'
-      })
-      .select()
+      .select('*')
+      .eq('user_id', userId)
       .single();
     
-    if (createError) {
-      console.error('Error creating golf bag:', createError);
+    if (bagError && bagError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      console.error('Error fetching golf bag:', bagError);
       return null;
     }
     
-    return { ...newBag, clubs: [] } as unknown as GolfBag;
+    // If no bag exists, create one
+    if (!bagData) {
+      console.log('No bag found for user, creating new bag:', userId);
+      
+      const { data: newBag, error: createError } = await supabase
+        .from('golf_bags')
+        .insert({
+          user_id: userId,
+          name: 'Min Golfbag'
+        })
+        .select()
+        .single();
+      
+      if (createError) {
+        console.error('Error creating golf bag:', createError);
+        return null;
+      }
+      
+      console.log('Successfully created new golf bag:', newBag.id);
+      return { ...newBag, clubs: [] } as unknown as GolfBag;
+    }
+    
+    console.log('Found existing golf bag:', bagData.id);
+    
+    // If bag exists, get the clubs
+    const { data: clubsData, error: clubsError } = await supabase
+      .from('clubs')
+      .select('*')
+      .eq('bag_id', bagData.id);
+    
+    if (clubsError) {
+      console.error('Error fetching clubs:', clubsError);
+      return { ...bagData, clubs: [] } as unknown as GolfBag;
+    }
+    
+    console.log(`Found ${clubsData?.length || 0} clubs in bag ${bagData.id}`);
+    
+    return {
+      ...bagData,
+      clubs: clubsData || []
+    } as unknown as GolfBag;
+  } catch (error) {
+    console.error('Unexpected error in getGolfBag:', error);
+    return null;
   }
-  
-  // If bag exists, get the clubs
-  const { data: clubsData, error: clubsError } = await supabase
-    .from('clubs')
-    .select('*')
-    .eq('bag_id', bagData.id);
-  
-  if (clubsError) {
-    console.error('Error fetching clubs:', clubsError);
-    return { ...bagData, clubs: [] } as unknown as GolfBag;
-  }
-  
-  return {
-    ...bagData,
-    clubs: clubsData
-  } as unknown as GolfBag;
 };
 
 export const addClubToBag = async (bagId: string, club: Omit<GolfClub, 'id'>): Promise<GolfClub | null> => {
-  console.log('Adding club to bag:', bagId, club);
-  
-  // Make sure the bag_id is properly set in the inserted club data
-  const clubData = {
-    ...club,
-    bag_id: bagId
-  };
-  
-  console.log('Club data to insert:', clubData);
-  
-  const { data, error } = await supabase
-    .from('clubs')
-    .insert(clubData)
-    .select()
-    .single();
-  
-  if (error) {
-    console.error('Error adding club to bag:', error);
+  try {
+    if (!bagId || typeof bagId !== 'string') {
+      console.error('Invalid bagId provided to addClubToBag:', bagId);
+      return null;
+    }
+    
+    console.log('Adding club to bag:', bagId, club);
+    
+    // Make sure the bag_id is properly set in the inserted club data
+    const clubData = {
+      ...club,
+      bag_id: bagId
+    };
+    
+    console.log('Club data to insert:', clubData);
+    
+    const { data, error } = await supabase
+      .from('clubs')
+      .insert(clubData)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error adding club to bag:', error);
+      return null;
+    }
+    
+    console.log('Successfully added club:', data);
+    return data as unknown as GolfClub;
+  } catch (error) {
+    console.error('Unexpected error in addClubToBag:', error);
     return null;
   }
-  
-  console.log('Successfully added club:', data);
-  return data as unknown as GolfClub;
 };
 
 // Match functions
