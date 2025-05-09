@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { useState, useEffect } from "react";
+import { toast } from "@/components/ui/use-toast";
 import Index from "./pages/Index";
 import Browse from "./pages/Browse";
 import Profile from "./pages/Profile";
@@ -75,6 +76,45 @@ const AppRoutes = () => {
 };
 
 const App = () => {
+  // Add error boundary handling
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    // Global error handler for unhandled promise rejections
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error("Unhandled promise rejection:", event.reason);
+      
+      // Don't show error for expected auth errors when not logged in
+      if (event.reason?.message?.includes("AuthProvider")) {
+        return;
+      }
+      
+      toast({
+        title: "Ett fel inträffade",
+        description: "Uppdatera sidan och försök igen.",
+        variant: "destructive",
+      });
+      setHasError(true);
+    };
+
+    // Handle connection errors
+    const handleOnline = () => {
+      console.log("Connection restored. Refreshing app state...");
+      // Only reload if there was an error
+      if (hasError) {
+        window.location.reload();
+      }
+    };
+
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    window.addEventListener('online', handleOnline);
+    
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [hasError]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

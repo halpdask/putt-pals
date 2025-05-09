@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,9 +13,19 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signUp } = useAuth();
+  const [authInitialized, setAuthInitialized] = useState(false);
+  const { signUp, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Check if user is already logged in
+  useEffect(() => {
+    if (user) {
+      console.log("User already logged in, redirecting to browse");
+      navigate("/browse");
+    }
+    setAuthInitialized(true);
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +80,18 @@ const Signup = () => {
       setLoading(false);
     }
   };
+
+  // Don't render until auth is initialized to prevent flashing
+  if (!authInitialized) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-green-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-golf-green-dark mx-auto mb-4"></div>
+          <p className="text-golf-green-dark">Laddar...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-green-50 to-white">

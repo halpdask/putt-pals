@@ -28,6 +28,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<GolferProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [authError, setAuthError] = useState<Error | null>(null);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
 
   const fetchProfile = async (userId: string) => {
     if (!userId) return null;
@@ -59,15 +61,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Handle recovery from connection issues
+  // Handle recovery from connection issues with exponential backoff
   const recoverSession = async () => {
     try {
-      console.log("Attempting to recover session...");
+      console.log(`Attempting to recover session (attempt ${reconnectAttempts + 1})...`);
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {
         console.error("Failed to recover session:", error);
-        return false;
+        
+        // Increment reconnect attempts and try again with exponential backoff
+        if (reconnectAttempts < 5) {
+          const delay = Math.min(1000 * (2 ** reconnectAttempts), 30000); // Max 30 seconds
+          console.log(`Will retry in ${delay}ms`);
+          
+          setTimeout(() => {
+            setReconnectAttempts(prev => prev + 1);
+            recoverSession();
+          }, delay);
+        } else {
+          // After maximum attempts, clear any stored data that might be causing issues
+          console.log("Maximum reconnect attempts reached. Clearing stored auth data.");
+          localStorage.removeItem("supabase.auth.token");
+          setAuthError(new Error("Failed to reconnect after multiple attempts"));
+          setLoading(false);
+          return false;
+        }
       }
       
       if (session) {
@@ -75,14 +94,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session.user);
         await fetchProfile(session.user.id);
+        setReconnectAttempts(0); // Reset on successful recovery
+        setAuthError(null);
         return true;
       } else {
         console.log("No session to recover");
+        setReconnectAttempts(0); // Reset counter since we got a valid "no session" response
         return false;
       }
     } catch (error) {
       console.error("Unexpected error recovering session:", error);
       return false;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -95,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (error) {
           console.error("Auth session error:", error);
+          setAuthError(error);
           setLoading(false);
           setAuthInitialized(true);
           return;
@@ -114,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthInitialized(true);
       } catch (error) {
         console.error("Error setting up auth:", error);
+        setAuthError(error as Error);
         setLoading(false);
         setAuthInitialized(true);
         
@@ -127,6 +153,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("Auth state changed:", event, session?.user?.id);
+        
+        // Clear error state on successful auth events
+        if (session || event === 'SIGNED_OUT') {
+          setAuthError(null);
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -156,17 +188,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const handleOnline = () => {
       console.log("Browser is online, attempting to reconnect");
       if (authInitialized) {
+        // Reset reconnect attempts when coming back online
+        setReconnectAttempts(0);
         recoverSession();
       }
     };
 
     window.addEventListener('online', handleOnline);
 
+    // Handle storage events for cross-tab auth sync
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key?.includes('supabase.auth')) {
+        console.log("Auth storage changed in another tab, syncing state");
+        recoverSession();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
     // Cleanup function
     return () => {
       subscription.unsubscribe();
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('online', handleOnline);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, [authInitialized]);
 
@@ -302,10 +347,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshProfile,
   };
 
+  // If there's an auth error and we're not loading anymore, show a toast once
+  useEffect(() => {
+    if (authError && !loading && authInitialized) {
+      console.log("Auth error detected:", authError);
+      // Only show the toast if we're not on login/signup pages
+      if (!window.location.pathname.includes('login') && !window.location.pathname.includes('signup')) {
+        toast({
+          title: "Problem med inloggningen",
+          description: "Din session har upphört. Logga in igen.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [authError, loading, authInitialized]);
+
   // Use the provider to make auth object available throughout app
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }
