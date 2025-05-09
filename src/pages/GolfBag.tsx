@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Flag, Plus, Search } from "lucide-react";
@@ -50,9 +49,11 @@ const AddClubForm = ({ bagId, onSuccess, onCancel }: AddClubFormProps) => {
 
   const addClubMutation = useMutation({
     mutationFn: (club: Omit<GolfClub, "id">) => {
-      return addClubToBag(bagId, club as GolfClub);
+      console.log('Mutation called with:', bagId, club);
+      return addClubToBag(bagId, club);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Club added successfully:', data);
       queryClient.invalidateQueries({ queryKey: ['golfBag'] });
       toast({
         title: "Klubba tillagd",
@@ -61,6 +62,7 @@ const AddClubForm = ({ bagId, onSuccess, onCancel }: AddClubFormProps) => {
       onSuccess();
     },
     onError: (error) => {
+      console.error('Error in mutation:', error);
       toast({
         title: "Ett fel inträffade",
         description: "Kunde inte lägga till klubban",
@@ -89,6 +91,7 @@ const AddClubForm = ({ bagId, onSuccess, onCancel }: AddClubFormProps) => {
       notes: notes || undefined
     };
 
+    console.log('Submitting new club:', newClub, 'to bag:', bagId);
     addClubMutation.mutate(newClub as GolfClub);
   };
 
@@ -187,11 +190,28 @@ const GolfBagPage = () => {
   const [isAddingClub, setIsAddingClub] = useState(false);
   const { toast } = useToast();
   
-  const { data: bag, isLoading } = useQuery({
+  const { data: bag, isLoading, error } = useQuery({
     queryKey: ['golfBag', user?.id],
-    queryFn: () => getGolfBag(user!.id),
-    enabled: !!user
+    queryFn: async () => {
+      console.log('Fetching golf bag for user:', user?.id);
+      if (!user?.id) return null;
+      const result = await getGolfBag(user.id);
+      console.log('Fetched golf bag:', result);
+      return result;
+    },
+    enabled: !!user?.id
   });
+
+  useEffect(() => {
+    if (error) {
+      console.error('Error fetching golf bag:', error);
+      toast({
+        title: "Ett fel inträffade",
+        description: "Kunde inte hämta din golfbag",
+        variant: "destructive"
+      });
+    }
+  }, [error, toast]);
 
   if (isLoading) {
     return (

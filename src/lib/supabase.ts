@@ -216,12 +216,19 @@ export const getGolfBag = async (userId: string): Promise<GolfBag | null> => {
 };
 
 export const addClubToBag = async (bagId: string, club: Omit<GolfClub, 'id'>): Promise<GolfClub | null> => {
+  console.log('Adding club to bag:', bagId, club);
+  
+  // Make sure the bag_id is properly set in the inserted club data
+  const clubData = {
+    ...club,
+    bag_id: bagId
+  };
+  
+  console.log('Club data to insert:', clubData);
+  
   const { data, error } = await supabase
     .from('clubs')
-    .insert({
-      ...club,
-      bag_id: bagId
-    })
+    .insert(clubData)
     .select()
     .single();
   
@@ -229,6 +236,8 @@ export const addClubToBag = async (bagId: string, club: Omit<GolfClub, 'id'>): P
     console.error('Error adding club to bag:', error);
     return null;
   }
+  
+  console.log('Successfully added club:', data);
   return data as unknown as GolfClub;
 };
 
