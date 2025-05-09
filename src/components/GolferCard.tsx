@@ -94,7 +94,7 @@ const GolferCard = ({ golfer, onLike, onDislike, disabled = false }: GolferCardP
           </div>
         </div>
         
-        <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-12">
+        <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-12">
           <button 
             className="swipe-button bg-red-50 text-red-500"
             onClick={() => onDislike(golfer.id)}
