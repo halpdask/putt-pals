@@ -1,4 +1,5 @@
 
+
 # PWA Icon Instructions
 
 This folder contains the PWA app icons in various sizes required for different devices and display scenarios.
@@ -51,12 +52,32 @@ if (-not (Test-Path -Path "public\icons")) {
 # Define the required icon sizes
 $sizes = 72, 96, 128, 144, 152, 192, 384, 512
 
-# Generate each icon size
-foreach ($size in $sizes) {
-    magick convert your-high-res-logo.png -resize ${size}x${size} "public\icons\icon-${size}x${size}.png"
+# Check which ImageMagick command is available
+$magickCommand = ""
+if (Get-Command "magick" -ErrorAction SilentlyContinue) {
+    $magickCommand = "magick"
+} elseif (Get-Command "convert" -ErrorAction SilentlyContinue) {
+    $magickCommand = "convert"
+} elseif (Test-Path "C:\Program Files\ImageMagick-*\magick.exe") {
+    # Find the ImageMagick installation
+    $magickPath = Get-ChildItem "C:\Program Files\ImageMagick-*\magick.exe" | Sort-Object -Property FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+    $magickCommand = "`"$magickPath`""
+} else {
+    Write-Host "ImageMagick not found. Please install it from https://imagemagick.org/script/download.php and add it to your PATH." -ForegroundColor Red
+    exit
 }
 
-Write-Host "Icon generation complete!"
+# Generate each icon size
+foreach ($size in $sizes) {
+    Write-Host "Generating ${size}x${size} icon..."
+    if ($magickCommand -eq "magick") {
+        Invoke-Expression "$magickCommand convert your-high-res-logo.png -resize ${size}x${size} public\icons\icon-${size}x${size}.png"
+    } else {
+        Invoke-Expression "$magickCommand your-high-res-logo.png -resize ${size}x${size} public\icons\icon-${size}x${size}.png"
+    }
+}
+
+Write-Host "Icon generation complete!" -ForegroundColor Green
 ```
 
 Note: Make sure to install ImageMagick for Windows from https://imagemagick.org/script/download.php and ensure it's in your PATH before running the script.
