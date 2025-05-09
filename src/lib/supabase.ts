@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { GolferProfile, GolfBag, GolfClub, Match, ChatMessage } from '../types/golfer';
 
@@ -293,6 +292,11 @@ export const getGolfBag = async (userId: string): Promise<GolfBag | null> => {
         return null;
       }
       
+      if (!newBag) {
+        console.error('No data returned from creating golf bag');
+        return null;
+      }
+      
       console.log('Successfully created new golf bag:', newBag.id);
       return { ...newBag, clubs: [] } as unknown as GolfBag;
     }
@@ -324,9 +328,10 @@ export const getGolfBag = async (userId: string): Promise<GolfBag | null> => {
 
 export const addClubToBag = async (bagId: string, club: Omit<GolfClub, 'id'>): Promise<GolfClub | null> => {
   try {
-    if (!bagId || typeof bagId !== 'string') {
+    // Validate the bagId is a proper UUID
+    if (!bagId || typeof bagId !== 'string' || bagId === 'new') {
       console.error('Invalid bagId provided to addClubToBag:', bagId);
-      return null;
+      throw new Error('A valid bag ID is required to add clubs');
     }
     
     console.log('Adding club to bag:', bagId, club);
@@ -337,7 +342,16 @@ export const addClubToBag = async (bagId: string, club: Omit<GolfClub, 'id'>): P
       bag_id: bagId
     };
     
-    console.log('Club data to insert:', clubData);
+    // Clean up undefined values that might cause issues
+    Object.keys(clubData).forEach(key => {
+      // @ts-ignore
+      if (clubData[key] && typeof clubData[key] === 'object' && clubData[key]._type === 'undefined') {
+        // @ts-ignore
+        clubData[key] = undefined;
+      }
+    });
+    
+    console.log('Club data to insert (after cleanup):', clubData);
     
     // Refactor to provide more detailed error handling
     const result = await supabase
@@ -355,8 +369,10 @@ export const addClubToBag = async (bagId: string, club: Omit<GolfClub, 'id'>): P
         console.error('Uniqueness constraint violated. This club might already exist.');
       } else if (result.error.code === '42501') { // Permission denied
         console.error('Permission denied. Check Row Level Security policies for the clubs table.');
+      } else if (result.error.code === '22P02') { // Invalid input syntax
+        console.error('Invalid input syntax. Check that all fields have the correct data type.');
       }
-      return null;
+      throw result.error;
     }
     
     if (!result.data) {
@@ -368,7 +384,7 @@ export const addClubToBag = async (bagId: string, club: Omit<GolfClub, 'id'>): P
     return result.data as unknown as GolfClub;
   } catch (error) {
     console.error('Unexpected error in addClubToBag:', error);
-    return null;
+    throw error;
   }
 };
 

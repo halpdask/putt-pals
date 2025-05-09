@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Flag, Plus, Search } from "lucide-react";
@@ -50,6 +51,13 @@ const AddClubForm = ({ bagId, onSuccess, onCancel }: AddClubFormProps) => {
   const addClubMutation = useMutation({
     mutationFn: (club: Omit<GolfClub, "id">) => {
       console.log('Mutation called with bag ID:', bagId);
+      
+      // Validate UUID before proceeding
+      if (!bagId || bagId === "new" || typeof bagId !== 'string') {
+        console.error('Invalid or missing bag ID:', bagId);
+        throw new Error('A valid bag ID is required to add clubs');
+      }
+      
       console.log('Club data being sent:', club);
       return addClubToBag(bagId, club);
     },
@@ -95,11 +103,12 @@ const AddClubForm = ({ bagId, onSuccess, onCancel }: AddClubFormProps) => {
       return;
     }
 
-    if (!bagId) {
-      console.error('Missing bagId when adding club');
+    // Validate that we have a valid bag ID
+    if (!bagId || bagId === "new") {
+      console.error('Missing or invalid bagId when adding club:', bagId);
       toast({
         title: "Tekniskt fel",
-        description: "Kunde inte identifiera din golfbag. Prova att uppdatera sidan.",
+        description: "Din golfbag behöver skapas först. Uppdatera sidan och försök igen.",
         variant: "destructive"
       });
       return;
@@ -111,7 +120,7 @@ const AddClubForm = ({ bagId, onSuccess, onCancel }: AddClubFormProps) => {
       type,
       loft,
       notes: notes || undefined,
-      bag_id: bagId // Explicitly set the bag_id here too
+      bag_id: bagId
     };
 
     console.log('Submitting new club:', newClub, 'to bag:', bagId);
@@ -267,6 +276,21 @@ const GolfBagPage = () => {
     );
   }
 
+  // Check if bag exists and has a valid ID before allowing club addition
+  const showAddClubDialog = () => {
+    if (!bag?.id) {
+      toast({
+        title: "Skapa golfbag först",
+        description: "Vi behöver skapa en golfbag åt dig innan du kan lägga till klubbor. Uppdatera sidan och försök igen.",
+        variant: "destructive"
+      });
+      // Force a refresh to ensure we get the bag
+      refetch();
+      return;
+    }
+    setIsAddingClub(true);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
       <header className="bg-white shadow-sm p-4">
@@ -274,30 +298,43 @@ const GolfBagPage = () => {
       </header>
       
       <div className="container mx-auto p-4">
-        {!bag || bag.clubs.length === 0 ? (
+        {!bag || !bag.id || bag.clubs.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm p-6 text-center">
             <Flag className="h-12 w-12 mx-auto text-golf-green-dark mb-4" />
             <h2 className="text-xl font-semibold mb-2">Din golfbag är tom</h2>
             <p className="text-gray-600 mb-6">
               Lägg till dina klubbor för att få bättre matchningar med andra golfare
             </p>
-            <Dialog open={isAddingClub} onOpenChange={setIsAddingClub}>
-              <DialogTrigger asChild>
-                <Button className="bg-golf-green-dark hover:bg-golf-green-light">
-                  <Plus className="mr-2 h-4 w-4" /> Lägg till första klubban
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Lägg till klubba</DialogTitle>
-                </DialogHeader>
-                <AddClubForm 
-                  bagId={bag?.id || "new"}
-                  onSuccess={() => setIsAddingClub(false)}
-                  onCancel={() => setIsAddingClub(false)}
-                />
-              </DialogContent>
-            </Dialog>
+            
+            {!bag || !bag.id ? (
+              <Button 
+                className="bg-golf-green-dark hover:bg-golf-green-light"
+                onClick={() => refetch()}
+              >
+                Skapa golfbag
+              </Button>
+            ) : (
+              <Dialog open={isAddingClub} onOpenChange={setIsAddingClub}>
+                <DialogTrigger asChild>
+                  <Button 
+                    className="bg-golf-green-dark hover:bg-golf-green-light"
+                    onClick={() => showAddClubDialog()}
+                  >
+                    <Plus className="mr-2 h-4 w-4" /> Lägg till första klubban
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Lägg till klubba</DialogTitle>
+                  </DialogHeader>
+                  <AddClubForm 
+                    bagId={bag.id}
+                    onSuccess={() => setIsAddingClub(false)}
+                    onCancel={() => setIsAddingClub(false)}
+                  />
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         ) : (
           <>
@@ -306,7 +343,10 @@ const GolfBagPage = () => {
                 <h2 className="text-lg font-semibold">{bag?.name || "Min Golfbag"}</h2>
                 <Dialog open={isAddingClub} onOpenChange={setIsAddingClub}>
                   <DialogTrigger asChild>
-                    <Button className="bg-golf-green-dark hover:bg-golf-green-light">
+                    <Button 
+                      className="bg-golf-green-dark hover:bg-golf-green-light"
+                      onClick={() => showAddClubDialog()}
+                    >
                       <Plus className="mr-2 h-4 w-4" /> Lägg till klubba
                     </Button>
                   </DialogTrigger>
@@ -315,7 +355,7 @@ const GolfBagPage = () => {
                       <DialogTitle>Lägg till klubba</DialogTitle>
                     </DialogHeader>
                     <AddClubForm 
-                      bagId={bag?.id}
+                      bagId={bag.id}
                       onSuccess={() => setIsAddingClub(false)}
                       onCancel={() => setIsAddingClub(false)}
                     />
