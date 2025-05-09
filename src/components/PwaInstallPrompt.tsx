@@ -87,8 +87,12 @@ const PwaInstallPrompt = () => {
         <X size={18} />
       </button>
       <div className="flex items-center">
-        <div className="w-12 h-12 bg-golf-green-dark rounded-full flex items-center justify-center mr-4">
-          <span className="text-white text-2xl font-bold">PP</span>
+        <div className="w-12 h-12 mr-4">
+          <img 
+            src="/icons/icon-192x192.png" 
+            alt="Putt-Pals Logo" 
+            className="w-full h-full object-contain"
+          />
         </div>
         <div>
           <h3 className="font-semibold mb-1">Installera Putt-Pals</h3>
