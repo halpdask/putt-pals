@@ -622,10 +622,20 @@ export const createMatch = async (match: Omit<Match, 'id'>): Promise<Match | nul
       return existingMatches[0] as unknown as Match;
     }
     
-    // Create new match
+    // Create new match with formatted data
+    const matchData = {
+      golfer_id: match.golferId,
+      matched_with_id: match.matchedWithId,
+      timestamp: match.timestamp,
+      read: match.read,
+      status: match.status
+    };
+    
+    console.log('Sending match data to Supabase:', matchData);
+    
     const { data, error } = await supabase
       .from('matches')
-      .insert(match)
+      .insert(matchData)
       .select()
       .single();
     
@@ -639,8 +649,19 @@ export const createMatch = async (match: Omit<Match, 'id'>): Promise<Match | nul
       return null;
     }
     
-    console.log('Successfully created match:', data);
-    return data as unknown as Match;
+    // Map database response back to our Match type
+    const createdMatch: Match = {
+      id: data.id,
+      golferId: data.golfer_id,
+      matchedWithId: data.matched_with_id,
+      timestamp: data.timestamp,
+      read: data.read,
+      status: data.status,
+      lastMessage: data.last_message
+    };
+    
+    console.log('Successfully created match:', createdMatch);
+    return createdMatch;
   } catch (error) {
     console.error('Unexpected error in createMatch:', error);
     throw error;

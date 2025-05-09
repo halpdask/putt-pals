@@ -34,15 +34,21 @@ const MatchList = ({ matches }: MatchListProps) => {
         for (const match of matches) {
           const matchedId = match.golferId === user?.id ? match.matchedWithId : match.golferId;
           try {
+            console.log(`Fetching profile for matched user ID: ${matchedId}`);
             // Try to get the profile from the database
             const fetchedProfile = await getProfile(matchedId);
             if (fetchedProfile) {
+              console.log(`Successfully fetched profile for ID ${matchedId}:`, fetchedProfile);
               profiles.push(fetchedProfile);
             } else {
+              console.log(`No profile found for ID ${matchedId}, trying mockdata`);
               // Fallback to mock data if profile not found
               const mockProfile = mockGolfers.find(golfer => golfer.id === matchedId);
               if (mockProfile) {
+                console.log(`Found mock profile for ID ${matchedId}`);
                 profiles.push(mockProfile);
+              } else {
+                console.log(`No mock profile found for ID ${matchedId} either`);
               }
             }
           } catch (error) {
@@ -50,6 +56,7 @@ const MatchList = ({ matches }: MatchListProps) => {
           }
         }
         
+        console.log(`Fetched ${profiles.length} profiles for ${matches.length} matches`);
         setMatchedProfiles(profiles);
       } catch (error) {
         console.error('Error in fetchMatchedProfiles:', error);
@@ -93,7 +100,10 @@ const MatchList = ({ matches }: MatchListProps) => {
           p.id === (match.golferId === user?.id ? match.matchedWithId : match.golferId)
         );
         
-        if (!profile) return null;
+        if (!profile) {
+          console.log(`No profile found for match:`, match);
+          return null;
+        }
         
         return (
           <div 

@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import Navbar from "../components/Navbar";
 import GolferCard from "../components/GolferCard";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +38,7 @@ const Browse = () => {
     roundTypes: [],
   });
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [isCreatingMatch, setIsCreatingMatch] = useState(false);
   const { toast } = useToast();
   const { user, profile } = useAuth();
   
@@ -114,6 +116,9 @@ const Browse = () => {
       return;
     }
     
+    // Set loading state
+    setIsCreatingMatch(true);
+    
     // Create a match in the database
     try {
       const match = {
@@ -124,19 +129,21 @@ const Browse = () => {
         status: 'confirmed' as const // Change from 'pending' to 'confirmed' to make matches appear immediately
       };
       
+      console.log("Creating match with data:", match);
       const createdMatch = await createMatch(match);
       
       if (createdMatch) {
+        console.log("Match created successfully:", createdMatch);
         // Invalidate matches query to refresh the matches list
-        queryClient.invalidateQueries({queryKey: ['matches', user.id]});
+        await queryClient.invalidateQueries({queryKey: ['matches', user.id]});
         
         toast({
           title: "Matchning!",
           description: "Du gillade denna golfaren, ni är nu matchade!",
-          variant: "default",
         });
+        goToNextGolfer();
       } else {
-        throw new Error("Kunde inte skapa matchning");
+        throw new Error("Returned null match");
       }
     } catch (error) {
       console.error("Error creating match:", error);
@@ -145,9 +152,9 @@ const Browse = () => {
         description: "Kunde inte skapa matchning just nu",
         variant: "destructive",
       });
+    } finally {
+      setIsCreatingMatch(false);
     }
-    
-    goToNextGolfer();
   };
 
   const handleDislike = (id: string) => {
@@ -348,7 +355,8 @@ const Browse = () => {
           <GolferCard 
             golfer={currentGolfer} 
             onLike={handleLike} 
-            onDislike={handleDislike} 
+            onDislike={handleDislike}
+            disabled={isCreatingMatch}
           />
         ) : (
           <div className="golf-card h-[70vh] max-h-[600px] w-full max-w-md mx-auto bg-white flex items-center justify-center">
