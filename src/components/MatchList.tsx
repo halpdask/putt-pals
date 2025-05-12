@@ -34,7 +34,7 @@ const MatchList = ({ matches }: MatchListProps) => {
     
     console.log('Setting up real-time subscription for matches');
     
-    const subscription = supabase
+    const channel = supabase
       .channel('match-updates')
       .on('postgres_changes', {
         event: '*',
@@ -84,7 +84,8 @@ const MatchList = ({ matches }: MatchListProps) => {
     
     return () => {
       console.log('Cleaning up match subscription');
-      supabase.channel(subscription).unsubscribe();
+      // Fix: Use the channel.unsubscribe() method directly
+      channel.unsubscribe();
     };
   }, [user?.id]);
 
@@ -216,4 +217,3 @@ const MatchList = ({ matches }: MatchListProps) => {
 };
 
 export default MatchList;
-

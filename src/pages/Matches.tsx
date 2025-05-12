@@ -32,7 +32,7 @@ const Matches = () => {
     
     console.log('Setting up real-time listener for matches page');
     
-    const subscription = supabase
+    const channel = supabase
       .channel('matches-page')
       .on('postgres_changes', {
         event: '*',
@@ -57,7 +57,8 @@ const Matches = () => {
     
     return () => {
       console.log('Cleaning up matches page subscription');
-      supabase.channel(subscription).unsubscribe();
+      // Fix: Use the channel.unsubscribe() method directly
+      channel.unsubscribe();
     };
   }, [user?.id, refetch]);
 
@@ -143,4 +144,3 @@ const Matches = () => {
 };
 
 export default Matches;
-
