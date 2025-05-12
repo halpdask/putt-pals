@@ -6,7 +6,7 @@ import { sv } from "date-fns/locale";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { getMatches, getProfile } from "../lib/supabase";
+import { getMatches, getProfile, supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 import ChatDialog from "./ChatDialog";
 import { mockGolfers } from "../data/mockGolfers"; // Keep as fallback
@@ -21,17 +21,83 @@ const MatchList = ({ matches }: MatchListProps) => {
   const [matchedProfiles, setMatchedProfiles] = useState<GolferProfile[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<{match: Match, profile: GolferProfile} | null>(null);
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
+  const [localMatches, setLocalMatches] = useState<Match[]>(matches);
   
+  // Initialize with props
+  useEffect(() => {
+    setLocalMatches(matches);
+  }, [matches]);
+  
+  // Set up real-time subscription for match updates
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    console.log('Setting up real-time subscription for matches');
+    
+    const subscription = supabase
+      .channel('match-updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'matches',
+        filter: `golfer_id=eq.${user.id},matched_with_id=eq.${user.id}`
+      }, (payload) => {
+        console.log('Match update received:', payload);
+        
+        if (payload.eventType === 'UPDATE') {
+          // Update the match in our local state
+          setLocalMatches(prev => 
+            prev.map(match => 
+              match.id === payload.new.id 
+                ? {
+                    ...match,
+                    lastMessage: payload.new.last_message,
+                    timestamp: payload.new.timestamp,
+                    read: payload.new.read,
+                    status: payload.new.status
+                  } 
+                : match
+            )
+          );
+        } else if (payload.eventType === 'INSERT') {
+          // Add the new match if it doesn't exist
+          setLocalMatches(prev => {
+            const exists = prev.some(m => m.id === payload.new.id);
+            if (!exists) {
+              return [...prev, {
+                id: payload.new.id,
+                golferId: payload.new.golfer_id,
+                matchedWithId: payload.new.matched_with_id,
+                timestamp: payload.new.timestamp,
+                read: payload.new.read,
+                status: payload.new.status,
+                lastMessage: payload.new.last_message
+              }];
+            }
+            return prev;
+          });
+        }
+      })
+      .subscribe((status) => {
+        console.log('Match subscription status:', status);
+      });
+    
+    return () => {
+      console.log('Cleaning up match subscription');
+      supabase.channel(subscription).unsubscribe();
+    };
+  }, [user?.id]);
+
   // Fetch profile data for each match
   useEffect(() => {
     const fetchMatchedProfiles = async () => {
-      if (!matches.length) return;
+      if (!localMatches.length) return;
       
       setIsLoadingProfiles(true);
       const profiles: GolferProfile[] = [];
       
       try {
-        for (const match of matches) {
+        for (const match of localMatches) {
           const matchedId = match.golferId === user?.id ? match.matchedWithId : match.golferId;
           try {
             console.log(`Fetching profile for matched user ID: ${matchedId}`);
@@ -56,7 +122,7 @@ const MatchList = ({ matches }: MatchListProps) => {
           }
         }
         
-        console.log(`Fetched ${profiles.length} profiles for ${matches.length} matches`);
+        console.log(`Fetched ${profiles.length} profiles for ${localMatches.length} matches`);
         setMatchedProfiles(profiles);
       } catch (error) {
         console.error('Error in fetchMatchedProfiles:', error);
@@ -66,7 +132,7 @@ const MatchList = ({ matches }: MatchListProps) => {
     };
     
     fetchMatchedProfiles();
-  }, [matches, user?.id]);
+  }, [localMatches, user?.id]);
 
   if (isLoadingProfiles) {
     return (
@@ -77,7 +143,7 @@ const MatchList = ({ matches }: MatchListProps) => {
     );
   }
 
-  if (matches.length === 0) {
+  if (localMatches.length === 0) {
     return (
       <div className="text-center py-10">
         <p className="text-gray-500">Du har inga matchningar än. Börja swipa för att hitta golfpartners!</p>
@@ -95,7 +161,7 @@ const MatchList = ({ matches }: MatchListProps) => {
 
   return (
     <div className="space-y-4">
-      {matches.map((match, index) => {
+      {localMatches.map((match, index) => {
         const profile = matchedProfiles.find(p => 
           p.id === (match.golferId === user?.id ? match.matchedWithId : match.golferId)
         );
@@ -150,3 +216,4 @@ const MatchList = ({ matches }: MatchListProps) => {
 };
 
 export default MatchList;
+

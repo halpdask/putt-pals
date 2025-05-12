@@ -8,7 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { MessageSquare, Send } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { GolferProfile, ChatMessage } from "../types/golfer";
-import { getChatMessages, sendChatMessage } from "../lib/supabase";
+import { getChatMessages, sendChatMessage, supabase } from "../lib/supabase";
 import { formatDistanceToNow } from "date-fns";
 import { sv } from "date-fns/locale";
 
@@ -27,16 +27,66 @@ const ChatDialog = ({ isOpen, onClose, matchId, matchedProfile }: ChatDialogProp
   const { user } = useAuth();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const realtimeSubscriptionRef = useRef<any>(null);
 
   useEffect(() => {
     if (isOpen && matchId) {
       loadMessages();
+      subscribeToMessages();
     }
+
+    return () => {
+      unsubscribeFromMessages();
+    };
   }, [isOpen, matchId]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const subscribeToMessages = () => {
+    if (!matchId) return;
+    
+    console.log(`Subscribing to real-time updates for match: ${matchId}`);
+    
+    // Remove any existing subscription first
+    unsubscribeFromMessages();
+    
+    // Create a new subscription
+    realtimeSubscriptionRef.current = supabase
+      .channel(`chat:${matchId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages',
+        filter: `match_id=eq.${matchId}`
+      }, (payload) => {
+        console.log('Received new message:', payload);
+        
+        // Only add the message if it's not from the current user or if we're not currently sending
+        if (!isSending || payload.new.sender_id !== user?.id) {
+          const newMessage = payload.new as unknown as ChatMessage;
+          
+          // Check if the message already exists in our messages array
+          const messageExists = messages.some(msg => msg.id === newMessage.id);
+          
+          if (!messageExists) {
+            setMessages(prevMessages => [...prevMessages, newMessage]);
+          }
+        }
+      })
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+      });
+  };
+
+  const unsubscribeFromMessages = () => {
+    if (realtimeSubscriptionRef.current) {
+      console.log('Unsubscribing from real-time updates');
+      supabase.channel(realtimeSubscriptionRef.current).unsubscribe();
+      realtimeSubscriptionRef.current = null;
+    }
+  };
 
   const loadMessages = async () => {
     if (!matchId) return;
@@ -203,3 +253,4 @@ const ChatDialog = ({ isOpen, onClose, matchId, matchedProfile }: ChatDialogProp
 };
 
 export default ChatDialog;
+

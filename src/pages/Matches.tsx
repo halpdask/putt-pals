@@ -1,10 +1,10 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Navbar from "../components/Navbar";
 import MatchList from "../components/MatchList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getMatches } from "../lib/supabase";
+import { getMatches, supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 import { Match } from "../types/golfer";
 import { Loader2 } from "lucide-react";
@@ -13,13 +13,53 @@ const Matches = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("matches");
 
-  const { data: matches = [], isLoading, isError, refetch } = useQuery({
+  const { 
+    data: matches = [], 
+    isLoading, 
+    isError, 
+    refetch 
+  } = useQuery({
     queryKey: ['matches', user?.id],
     queryFn: () => user ? getMatches(user.id) : [],
     enabled: !!user,
     staleTime: 1000 * 60, // Consider data stale after 1 minute
     refetchOnWindowFocus: true,
   });
+
+  // Set up real-time listener to refetch matches when data changes
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    console.log('Setting up real-time listener for matches page');
+    
+    const subscription = supabase
+      .channel('matches-page')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'matches',
+        filter: `or(golfer_id.eq.${user.id},matched_with_id.eq.${user.id})`
+      }, () => {
+        console.log('Match data changed, refetching matches');
+        refetch();
+      })
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages'
+      }, () => {
+        console.log('New chat message detected, refetching matches');
+        refetch();
+      })
+      .subscribe((status) => {
+        console.log('Matches page subscription status:', status);
+      });
+    
+    return () => {
+      console.log('Cleaning up matches page subscription');
+      supabase.channel(subscription).unsubscribe();
+    };
+  }, [user?.id, refetch]);
 
   // For now, all matches with status 'confirmed' are treated as confirmed
   const confirmedMatches: Match[] = matches.filter(match => 
@@ -103,3 +143,4 @@ const Matches = () => {
 };
 
 export default Matches;
+
