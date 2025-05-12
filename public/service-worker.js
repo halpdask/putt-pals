@@ -1,16 +1,15 @@
 // Service Worker Version
-const CACHE_NAME = 'putt-pals-cache-v1';
+const CACHE_NAME = 'putt-pals-cache-v2'; // Incremented version number
 
 // Files to cache (core app files)
 const filesToCache = [
   '/',
   '/index.html',
-  '/manifest.json',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
+  '/manifest.json'
+  // Removed potentially non-existing icon files that might cause caching failures
 ];
 
-// Install event - cache core app files
+// Install event - cache core app files with improved error handling
 self.addEventListener('install', (event) => {
   console.log('Service Worker: Installing...');
   
@@ -21,7 +20,15 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('Service Worker: Caching Core App Files');
-        return cache.addAll(filesToCache);
+        // Use cache.add for each file individually to handle errors more gracefully
+        return Promise.all(
+          filesToCache.map(url => {
+            return cache.add(url).catch(error => {
+              console.error(`Failed to cache: ${url}`, error);
+              // Continue even if one file fails to cache
+            });
+          })
+        );
       })
   );
 });
