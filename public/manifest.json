@@ -3,7 +3,7 @@
   "name": "Putt-Pals",
   "short_name": "Putt-Pals",
   "description": "Matcha med andra golfare och hitta din perfekta golfpartner i Sverige",
-  "start_url": "/",
+  "start_url": "/login",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0d783c",
