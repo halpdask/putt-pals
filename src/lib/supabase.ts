@@ -708,21 +708,37 @@ export const getChatMessages = async (matchId: string): Promise<ChatMessage[]> =
 };
 
 export const sendChatMessage = async (message: Omit<ChatMessage, 'id' | 'timestamp' | 'read'>): Promise<ChatMessage | null> => {
-  const { data, error } = await supabase
-    .from('chat_messages')
-    .insert({
-      ...message,
-      timestamp: Date.now(),
-      read: false
-    })
-    .select()
-    .single();
+  // Convert JavaScript timestamp to an ISO string which PostgreSQL can handle
+  const now = new Date();
   
-  if (error) {
-    console.error('Error sending chat message:', error);
+  try {
+    console.log("Sending chat message with data:", {
+      ...message,
+      timestamp: now.toISOString(), // Using ISO string format instead of milliseconds timestamp
+      read: false
+    });
+    
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .insert({
+        ...message,
+        timestamp: now.toISOString(), // Using ISO string format
+        read: false
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error sending chat message:', error);
+      return null;
+    }
+    
+    console.log("Message sent successfully, response:", data);
+    return data as unknown as ChatMessage;
+  } catch (err) {
+    console.error("Unexpected error in sendChatMessage:", err);
     return null;
   }
-  return data as unknown as ChatMessage;
 };
 
 // Initialize connection checks when this module is imported
