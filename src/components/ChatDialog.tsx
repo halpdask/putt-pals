@@ -23,6 +23,7 @@ const ChatDialog = ({ isOpen, onClose, matchId, matchedProfile }: ChatDialogProp
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -61,6 +62,9 @@ const ChatDialog = ({ isOpen, onClose, matchId, matchedProfile }: ChatDialogProp
     
     if (!newMessage.trim() || !user || !matchId) return;
     
+    // Set sending state to show feedback
+    setIsSending(true);
+    
     try {
       const messageData = {
         match_id: matchId,
@@ -68,11 +72,16 @@ const ChatDialog = ({ isOpen, onClose, matchId, matchedProfile }: ChatDialogProp
         content: newMessage
       };
       
+      console.log("Sending message:", messageData);
+      
       const sentMessage = await sendChatMessage(messageData);
       
       if (sentMessage) {
-        setMessages([...messages, sentMessage]);
+        console.log("Message sent successfully:", sentMessage);
+        setMessages(prevMessages => [...prevMessages, sentMessage]);
         setNewMessage("");
+      } else {
+        throw new Error("Failed to send message");
       }
     } catch (error) {
       console.error("Error sending message:", error);
@@ -81,6 +90,8 @@ const ChatDialog = ({ isOpen, onClose, matchId, matchedProfile }: ChatDialogProp
         description: "Ett fel uppstod vid sändning av meddelande.",
         variant: "destructive",
       });
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -175,8 +186,14 @@ const ChatDialog = ({ isOpen, onClose, matchId, matchedProfile }: ChatDialogProp
             placeholder="Skriv ett meddelande..."
             className="flex-1"
             autoComplete="off"
+            disabled={isSending}
           />
-          <Button type="submit" size="icon" disabled={!newMessage.trim()}>
+          <Button 
+            type="submit" 
+            size="icon" 
+            disabled={!newMessage.trim() || isSending}
+            className={isSending ? "opacity-70 cursor-not-allowed" : ""}
+          >
             <Send size={18} />
           </Button>
         </form>
