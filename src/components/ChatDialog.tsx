@@ -63,16 +63,21 @@ const ChatDialog = ({ isOpen, onClose, matchId, matchedProfile }: ChatDialogProp
       }, (payload) => {
         console.log('Received new message:', payload);
         
-        // Only add the message if it's not from the current user or if we're not currently sending
-        if (!isSending || payload.new.sender_id !== user?.id) {
-          const newMessage = payload.new as unknown as ChatMessage;
-          
-          // Check if the message already exists in our messages array
-          const messageExists = messages.some(msg => msg.id === newMessage.id);
-          
-          if (!messageExists) {
-            setMessages(prevMessages => [...prevMessages, newMessage]);
-          }
+        const newMessage = {
+          id: payload.new.id,
+          match_id: payload.new.match_id,
+          sender_id: payload.new.sender_id,
+          content: payload.new.content,
+          timestamp: payload.new.timestamp,
+          read: payload.new.read
+        } as ChatMessage;
+        
+        // Check if the message already exists in our messages array
+        const messageExists = messages.some(msg => msg.id === newMessage.id);
+        
+        if (!messageExists) {
+          console.log('Adding new message to chat:', newMessage);
+          setMessages(prevMessages => [...prevMessages, newMessage]);
         }
       })
       .subscribe((status) => {
@@ -83,7 +88,7 @@ const ChatDialog = ({ isOpen, onClose, matchId, matchedProfile }: ChatDialogProp
   const unsubscribeFromMessages = () => {
     if (realtimeSubscriptionRef.current) {
       console.log('Unsubscribing from real-time updates');
-      supabase.channel(realtimeSubscriptionRef.current).unsubscribe();
+      realtimeSubscriptionRef.current.unsubscribe();
       realtimeSubscriptionRef.current = null;
     }
   };
@@ -253,4 +258,3 @@ const ChatDialog = ({ isOpen, onClose, matchId, matchedProfile }: ChatDialogProp
 };
 
 export default ChatDialog;
-

@@ -40,7 +40,7 @@ const MatchList = ({ matches }: MatchListProps) => {
         event: '*',
         schema: 'public',
         table: 'matches',
-        filter: `golfer_id=eq.${user.id},matched_with_id=eq.${user.id}`
+        filter: `or(golfer_id.eq.${user.id},matched_with_id.eq.${user.id})`
       }, (payload) => {
         console.log('Match update received:', payload);
         

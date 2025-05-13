@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Navbar from "../components/Navbar";
@@ -47,9 +46,18 @@ const Matches = () => {
         event: 'INSERT',
         schema: 'public',
         table: 'chat_messages'
-      }, () => {
-        console.log('New chat message detected, refetching matches');
-        refetch();
+      }, (payload) => {
+        console.log('New chat message detected, payload:', payload);
+        // Check if this message is related to one of our matches
+        const matchId = payload.new.match_id;
+        const isRelevantMatch = matches.some(match => match.id === matchId);
+        
+        if (isRelevantMatch) {
+          console.log('Message is for one of our matches, refetching matches');
+          refetch();
+        } else {
+          console.log('Message is not for one of our matches, ignoring');
+        }
       })
       .subscribe((status) => {
         console.log('Matches page subscription status:', status);
@@ -60,7 +68,7 @@ const Matches = () => {
       // Fix: Use the channel.unsubscribe() method directly
       channel.unsubscribe();
     };
-  }, [user?.id, refetch]);
+  }, [user?.id, refetch, matches]);
 
   // For now, all matches with status 'confirmed' are treated as confirmed
   const confirmedMatches: Match[] = matches.filter(match => 
